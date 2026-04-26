@@ -31,29 +31,29 @@ public class UserOtpServiceImpl implements UserOtpService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User does not exist with email " + email));
 
-        Optional<UserOtp> userOtpOptional = userOtpRepository.findByUserId(user.getId());
+        Optional<UserOtp> userOtpOptional = userOtpRepository.findByUserId(user.getUserId());
 
         String otp = UUID.randomUUID().toString().substring(0, 6);
         if(userOtpOptional.isEmpty()) {
             UserOtp userOtp = UserOtp.builder()
-                    .userId(user.getId())
+                    .userId(user.getUserId())
                     .otp(otp)
                     .otpSent(1)
                     .build();
             userOtpRepository.save(userOtp);
             emailService.sendOtp(email, otp);
-            log.info("OTP sent to user {}", user.getId());
+            log.info("OTP sent to user {}", user.getUserId());
         }
         else {
             UserOtp userOtp = userOtpOptional.get();
             LocalDateTime now = LocalDateTime.now();
 
             if(userOtp.getLastOtpDateTime().plusMinutes(5).isAfter(now)) {
-                log.warn("OTP resend blocked for user {}", user.getId());
+                log.warn("OTP resend blocked for user {}", user.getUserId());
                 throw new OtpException("You can send new OTP after 5 minutes");
             }
             if(userOtp.getOtpSent() >= AppConstants.otpLimit) {
-                log.warn("OTP limit reached for user {}", user.getId());
+                log.warn("OTP limit reached for user {}", user.getUserId());
                 throw new OtpException("Maximum OTP limit reached please try again when limit reset - tomorrow");
             }
 
@@ -61,7 +61,7 @@ public class UserOtpServiceImpl implements UserOtpService {
             userOtp.setOtp(otp);
             userOtpRepository.save(userOtp);
             emailService.sendOtp(user.getEmail(), otp);
-            log.info("OTP resent to user {}", user.getId());
+            log.info("OTP resent to user {}", user.getUserId());
         }
     }
 }

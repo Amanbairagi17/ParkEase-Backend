@@ -4,7 +4,7 @@ import lombok.Data;
 
 @Data
 public class AuthResponseDto {
-    private Long Id;
+    private Long userId;
     private String fullName;
     private String email;
     private String role;

@@ -56,6 +56,6 @@ public class CustomUserDetails implements UserDetails {
 
     // this user Id needed in jwt creation for role-based access
     public Long getUserId() {
-        return user.getId();   // ✅ expose userId
+        return user.getUserId();   // ✅ expose userId
     }
 }
