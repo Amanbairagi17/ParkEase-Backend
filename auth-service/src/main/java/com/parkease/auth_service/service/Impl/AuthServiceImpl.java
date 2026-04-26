@@ -2,16 +2,22 @@ package com.parkease.auth_service.service.Impl;
 
 import com.parkease.auth_service.dtos.AuthResponseDto;
 import com.parkease.auth_service.dtos.LoginDto;
+import com.parkease.auth_service.dtos.ResetPasswordDto;
 import com.parkease.auth_service.dtos.SignUpDto;
 import com.parkease.auth_service.entity.CustomUserDetails;
 import com.parkease.auth_service.entity.User;
+import com.parkease.auth_service.entity.UserOtp;
 import com.parkease.auth_service.entity.UserVerification;
+import com.parkease.auth_service.exception.OtpException;
+import com.parkease.auth_service.exception.UserNotFoundException;
 import com.parkease.auth_service.mapper.Impl.AuthResponseMapper;
 import com.parkease.auth_service.mapper.Impl.SignUpMapper;
 import com.parkease.auth_service.repository.AuthRepository;
 import com.parkease.auth_service.repository.UserOtpRepository;
+import com.parkease.auth_service.repository.UserRepository;
 import com.parkease.auth_service.repository.UserVerificationRepository;
 import com.parkease.auth_service.service.AuthService;
+import com.parkease.auth_service.service.UserOtpService;
 import com.parkease.auth_service.service.UserVerificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +28,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Slf4j
@@ -38,10 +46,13 @@ public class AuthServiceImpl implements AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final JWTServiceImpl jwtService;
     private final AuthenticationManager authenticationManager;
-    private final UserOtpRepository userOtpRepository;
+    private final UserOtpService userOtpService;
     private final UserVerificationRepository userVerificationRepository;
     private final EmailServiceImpl emailService;
     private final UserVerificationService userVerificationService;
+    private final UserRepository userRepository;
+    private final UserOtpRepository userOtpRepository;
+
 
 
     public AuthResponseDto registerUser(SignUpDto signUpDto) {
@@ -121,5 +132,43 @@ public class AuthServiceImpl implements AuthService {
         userVerificationRepository.delete(verification);
     }
 
+    @Override
+    public void resetPassword(ResetPasswordDto resetPasswordDto) {
+        log.info("Password reset requested for email {}", resetPasswordDto.getEmail());
+        User user = userRepository.findByEmail(resetPasswordDto.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found with email " + resetPasswordDto.getEmail()));
 
+        UserOtp userOtp = userOtpRepository.findByUserId(user.getId())
+                .orElseThrow(() ->  new OtpException("No otp for user " + user.getId()));
+
+        if(userOtp.getLastOtpDateTime().plusMinutes(5).isBefore(LocalDateTime.now())) {
+            log.warn("Password reset failed due to expired OTP for email {}", resetPasswordDto.getEmail());
+            throw new OtpException("OTP expired");
+        }
+
+        if(!Objects.equals(userOtp.getUserId(), user.getId())) {
+            log.warn("Password reset failed due to OTP ownership mismatch for user {}", user.getId());
+            throw new OtpException("Internal error try resending otp");
+        }
+
+        if(!userOtp.getOtp().equals(resetPasswordDto.getOtp())) {
+            log.warn("Password reset failed due to invalid OTP for email {}", resetPasswordDto.getEmail());
+            throw new OtpException("Invalid otp");
+        }
+
+        /*
+         reset the otp to a random very large otp so the user cannot user the same
+         otp to change the password again
+        */
+        userOtp.setOtp(UUID.randomUUID().toString());
+        user.setPassword(passwordEncoder.encode(resetPasswordDto.getNewPassword()));
+        userRepository.save(user);
+        log.info("Password reset completed for user {}", user.getId());
+    }
+
+    @Override
+    public void sendOtp(String email) {
+        log.info("Password reset OTP requested for email {}", email);
+        userOtpService.sendOtp(email);
+    }
 }

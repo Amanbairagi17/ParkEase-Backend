@@ -29,6 +29,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
+    @ExceptionHandler(OtpException.class)
+    public ResponseEntity<ErrorResponse> handeOtpException(OtpException exception){
+        log.error(exception.getMessage());
+
+        ErrorResponse error = new ErrorResponse();
+        error.setTimeStamp(LocalDateTime.now());
+        error.setStatus(HttpStatus.NOT_FOUND.value());
+        error.setMessage("Token not found");
+        error.setError(exception.getMessage());
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
     @ExceptionHandler(TokenNotFoundException.class)
     public ResponseEntity<ErrorResponse> handelTokenNotFoundException(TokenNotFoundException ex) {
         log.error(ex.getMessage());
@@ -36,7 +48,7 @@ public class GlobalExceptionHandler {
         ErrorResponse error = new ErrorResponse();
         error.setTimeStamp(LocalDateTime.now());
         error.setStatus(HttpStatus.NOT_FOUND.value());
-        error.setMessage("Token not found");
+        error.setMessage("OTP max limit reached!!");
         error.setError(ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);

@@ -2,6 +2,7 @@ package com.parkease.auth_service.controller;
 
 import com.parkease.auth_service.dtos.AuthResponseDto;
 import com.parkease.auth_service.dtos.LoginDto;
+import com.parkease.auth_service.dtos.ResetPasswordDto;
 import com.parkease.auth_service.dtos.SignUpDto;
 import com.parkease.auth_service.service.Impl.AuthServiceImpl;
 import jakarta.validation.Valid;
@@ -40,7 +41,21 @@ public class AuthController {
 
         authService.verify(token);
 
-        return ResponseEntity.ok("Email verified successfully");
+        return ResponseEntity.ok("Email account verified successfully, you can login now");
+    }
+
+    // SEND OTP
+    @PostMapping("/send-otp")
+    public ResponseEntity<String> sendOtp(@RequestParam String email) {
+        authService.sendOtp(email);
+        return ResponseEntity.ok("OTP sent to email");
+    }
+
+    // RESET PASSWORD
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordDto dto) {
+        authService.resetPassword(dto);
+        return ResponseEntity.ok("Password reset successful");
     }
 
 }
