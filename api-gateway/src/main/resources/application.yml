@@ -1,0 +1,137 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+              - PATCH
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+
+      routes:
+
+        - id: auth-service
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - PUBLIC
+
+        - id: vehicle-service
+          uri: lb://VEHICLE-SERVICE
+          predicates:
+            - Path=/api/vehicle/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - ADMIN
+
+        - id: parkinglot-service
+          uri: lb://PARKINGLOT-SERVICE
+          predicates:
+            - Path=/api/parking-lots/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - MANAGER
+                  - ADMIN
+
+        - id: parkingspot-read
+          uri: lb://PARKINGSPOT-SERVICE
+          predicates:
+            - Path=/api/parking-spots/**
+            - Method=GET
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - MANAGER
+                  - ADMIN
+
+        - id: parkingspot-write
+          uri: lb://PARKINGSPOT-SERVICE
+          predicates:
+            - Path=/api/parking-spots/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - MANAGER
+                  - ADMIN
+
+        - id: booking-read
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/bookings/**
+            - Method=GET
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - MANAGER
+                  - ADMIN
+
+        - id: booking-write
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/bookings/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - ADMIN
+
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payments/**
+            - Method=POST,PUT,DELETE
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - ADMIN
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+security:
+  jwt:
+    secret: ${jwt-secret-key}

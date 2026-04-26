@@ -1,0 +1,28 @@
+package com.parkease.payment_service.dtos;
+
+import com.parkease.payment_service.entity.PaymentMode;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import lombok.Data;
+
+import java.math.BigDecimal;
+
+@Data
+public class PaymentRequestDto {
+
+    @NotNull(message = "bookingId is required")
+    private Long bookingId;
+
+    @NotNull(message = "userId is required")
+    private Long userId;
+
+    @NotNull(message = "amount is required")
+    @Positive(message = "amount must be positive")
+    private BigDecimal amount;
+
+    @NotNull(message = "payment mode is required")
+    private PaymentMode mode;
+
+    private String description;
+    private String currency = "INR";
+}

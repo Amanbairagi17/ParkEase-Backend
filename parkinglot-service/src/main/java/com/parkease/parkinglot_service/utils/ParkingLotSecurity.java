@@ -1,0 +1,29 @@
+package com.parkease.parkinglot_service.utils;
+
+import com.parkease.parkinglot_service.repository.ParkingLotRepository;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ParkingLotSecurity {
+
+    private final ParkingLotRepository parkingLotRepository;
+
+    public ParkingLotSecurity(ParkingLotRepository parkingLotRepository) {
+        this.parkingLotRepository = parkingLotRepository;
+    }
+
+    public boolean isOwner(Integer lotId) {
+
+        // current logged-in user
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        // lot owner (managerId)
+        Integer managerId = parkingLotRepository.findManagerIdByLotId(lotId);
+
+        if (managerId == null) {
+            return false;
+        }
+
+        return currentUserId.equals(Long.valueOf(managerId));
+    }
+}

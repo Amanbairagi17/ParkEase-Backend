@@ -1,0 +1,33 @@
+package com.parkease.booking_service.service;
+
+import com.parkease.booking_service.dtos.BookingRequestDto;
+import com.parkease.booking_service.dtos.BookingResponseDto;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public interface BookingService {
+
+    BookingResponseDto createBooking(BookingRequestDto requestDto);
+
+    BookingResponseDto getBookingById(Long bookingId);
+
+    List<BookingResponseDto> getBookingsByUser(Long userId);
+
+    List<BookingResponseDto> getBookingsByLot(Long lotId);
+
+    List<BookingResponseDto> getActiveBookings();
+
+    BookingResponseDto cancelBooking(Long bookingId);
+
+    BookingResponseDto checkIn(Long bookingId);
+
+    BookingResponseDto checkOut(Long bookingId, BigDecimal hourlyRate);
+
+    BookingResponseDto extendBooking(Long bookingId, LocalDateTime newEndTime);
+
+    BigDecimal calculateAmount(LocalDateTime startTime, LocalDateTime endTime, BigDecimal hourlyRate);
+
+    List<BookingResponseDto> getBookingHistory(Long userId);
+}

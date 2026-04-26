@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: booking-service
+
+  cloud:
+    openfeign:
+      okhttp:
+        enabled: true
+
+  datasource:
+    url: ${DATABASE}
+    username: ${USERNAME}
+    password: ${PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+      show-sql: false
+
+server:
+  port: 8085
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    healthcheck:
+      enabled: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
