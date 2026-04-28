@@ -1,33 +1,36 @@
 package com.parkease.parkingspot_service.utils;
 
+import com.parkease.parkingspot_service.client.ParkingLotServiceClient;
+import com.parkease.parkingspot_service.dtos.ParkingLotLookupResponseDto;
+import com.parkease.parkingspot_service.entity.ParkingSpot;
 import com.parkease.parkingspot_service.repository.ParkingSpotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("parkingSpotSecurity")
 @RequiredArgsConstructor
 public class ParkingLotSecurity {
 
     private final ParkingSpotRepository parkingSpotRepository;
+    private final ParkingLotServiceClient parkingLotServiceClient;
 
-    public boolean isOwner(Integer spotId) {
+    public boolean isOwner(Long spotId) {
 
-        // ✅ Current user
         Long currentUserId = SecurityUtils.getCurrentUserId();
         String role = SecurityUtils.getCurrentUserRole();
 
-        // ✅ ADMIN override
         if ("ADMIN".equalsIgnoreCase(role)) {
             return true;
         }
 
-        // ✅ Fetch managerId via JOIN query
-        Integer managerId = parkingSpotRepository.findManagerIdBySpotId(spotId);
+//        ParkingSpot spot = parkingSpotRepository.findById(spotId)
+//                .orElse(null);
+//
+//        if (spot == null) return false;
 
-        if (managerId == null) {
-            return false;
-        }
+        // 🔥 Call another service
+        ParkingLotLookupResponseDto responseDto = parkingLotServiceClient.getLotById(spotId);
 
-        return currentUserId != null && currentUserId.equals(managerId.longValue());
+        return currentUserId != null && currentUserId.equals(responseDto.getManagerId());
     }
 }

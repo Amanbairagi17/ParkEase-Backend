@@ -76,13 +76,14 @@ spring:
           uri: lb://PARKINGSPOT-SERVICE
           predicates:
             - Path=/api/parking-spots/**
-            - Method=POST,PUT,DELETE
+            - Method=POST,PUT,DELETE,PATCH
           filters:
             - name: RoleFilter
               args:
                 roles:
                   - MANAGER
                   - ADMIN
+                  - DRIVER
 
         - id: booking-read
           uri: lb://BOOKING-SERVICE
@@ -134,4 +135,4 @@ eureka:
 
 security:
   jwt:
-    secret: ${jwt-secret-key}
+    secret: ${JWT_SECRET_KEY}

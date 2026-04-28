@@ -125,7 +125,7 @@ public class ParkingSpotController {
     // OWNER OR ADMIN
     @PreAuthorize("hasRole('ADMIN') or @parkingSpotSecurity.isOwner(#spotId)")
     @PutMapping("/{spotId}")
-    public ResponseEntity<ParkingSpotResponseDto> updateSpot(@PathVariable Long spotId,
+    public ResponseEntity<ParkingSpotResponseDto> updateSpot(@PathVariable("spotId") Long spotId,
                                                              @Valid @RequestBody ParkingSpotRequestDto requestDto) {
 
         log.info("Update spot request | spotId={}", spotId);
@@ -136,7 +136,7 @@ public class ParkingSpotController {
     // OWNER OR ADMIN
     @PreAuthorize("hasRole('ADMIN') or @parkingSpotSecurity.isOwner(#spotId)")
     @DeleteMapping("/{spotId}")
-    public ResponseEntity<Void> deleteSpot(@PathVariable Long spotId) {
+    public ResponseEntity<Void> deleteSpot(@PathVariable("spotId") Long spotId) {
 
         log.info("Delete spot request | spotId={}", spotId);
 

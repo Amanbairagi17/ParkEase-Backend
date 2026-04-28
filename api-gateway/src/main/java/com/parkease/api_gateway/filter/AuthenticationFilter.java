@@ -52,7 +52,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         String token = authHeader.substring(7);
-
+        log.info("Token : " +token);
+        log.debug("Authorization token received (length={})", token != null ? token.length() : 0);
         try {
             if (!jwtUtil.isTokenValid(token)) {
                 return onError(exchange, "Invalid Token", HttpStatus.UNAUTHORIZED);

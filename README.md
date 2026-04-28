@@ -20,7 +20,7 @@ This folder contains the Spring Boot microservices for ParkEase.
 $env:DATABASE="jdbc:mysql://localhost:3306/parkease"
 $env:USERNAME="your_mysql_username"
 $env:PASSWORD="your_mysql_password"
-$env:jwt-secret-key="your_jwt_secret"
+$env:JWT_SECRET_KEY="your_jwt_secret"
 ```
 
 ## Startup Order
