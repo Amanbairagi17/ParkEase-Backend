@@ -37,7 +37,7 @@ public class ParkingLotController {
     // Public / Authenticated
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{lotId}")
-    public ResponseEntity<ParkingLotResponseDto> getLotById(@PathVariable Integer lotId) {
+    public ResponseEntity<ParkingLotResponseDto> getLotById(@PathVariable Long lotId) {
         log.info("Fetching parking lot by id. lotId={}", lotId);
 
         ParkingLotResponseDto response = parkingLotService.getLotById(lotId);
@@ -75,7 +75,7 @@ public class ParkingLotController {
     //  Manager owns data OR Admin
     @PreAuthorize("hasRole('ADMIN') or #managerId == authentication.principal")
     @GetMapping("/manager/{managerId}")
-    public ResponseEntity<List<ParkingLotResponseDto>> getLotsByManager(@PathVariable Integer managerId) {
+    public ResponseEntity<List<ParkingLotResponseDto>> getLotsByManager(@PathVariable Long managerId) {
 
         log.info("Fetching lots for managerId={}", managerId);
 
@@ -88,7 +88,7 @@ public class ParkingLotController {
     // Update lot (Manager/Admin)
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     @PutMapping("/{lotId}")
-    public ResponseEntity<ParkingLotResponseDto> updateLot(@PathVariable Integer lotId,
+    public ResponseEntity<ParkingLotResponseDto> updateLot(@PathVariable Long lotId,
                                                            @Valid @RequestBody ParkingLotRequestDto requestDto) {
 
         log.info("Updating parking lot. lotId={}", lotId);
@@ -102,7 +102,7 @@ public class ParkingLotController {
     // Toggle open (Manager/Admin)
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     @PatchMapping("/{lotId}/toggle-open")
-    public ResponseEntity<Void> toggleOpen(@PathVariable Integer lotId) {
+    public ResponseEntity<Void> toggleOpen(@PathVariable Long lotId) {
 
         log.info("Toggling open status. lotId={}", lotId);
 
@@ -115,7 +115,7 @@ public class ParkingLotController {
     // Delete lot (Admin only)
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{lotId}")
-    public ResponseEntity<Void> deleteLot(@PathVariable Integer lotId) {
+    public ResponseEntity<Void> deleteLot(@PathVariable Long lotId) {
 
         log.info("Deleting parking lot. lotId={}", lotId);
 
@@ -128,7 +128,7 @@ public class ParkingLotController {
     //  INTERNAL (only system/admin)
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{lotId}/decrement-available")
-    public ResponseEntity<Void> decrementAvailable(@PathVariable Integer lotId) {
+    public ResponseEntity<Void> decrementAvailable(@PathVariable Long lotId) {
 
         log.info("Decrementing available spots. lotId={}", lotId);
 
@@ -140,7 +140,7 @@ public class ParkingLotController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{lotId}/increment-available")
-    public ResponseEntity<Void> incrementAvailable(@PathVariable Integer lotId) {
+    public ResponseEntity<Void> incrementAvailable(@PathVariable Long lotId) {
 
         log.info("Incrementing available spots. lotId={}", lotId);
 

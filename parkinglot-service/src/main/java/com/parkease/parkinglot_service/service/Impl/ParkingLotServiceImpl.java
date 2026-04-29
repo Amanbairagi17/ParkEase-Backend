@@ -49,7 +49,7 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     }
 
     @Override
-    public ParkingLotResponseDto getLotById(Integer lotId) {
+    public ParkingLotResponseDto getLotById(Long lotId) {
         ParkingLot parkingLot = findLotOrThrow(lotId);
         return responseMapper.mapTo(parkingLot);
     }
@@ -71,7 +71,7 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     }
 
     @Override
-    public List<ParkingLotResponseDto> getLotsByManager(Integer managerId) {
+    public List<ParkingLotResponseDto> getLotsByManager(Long managerId) {
         return parkingLotRepository.findByManagerId(managerId)
                 .stream()
                 .map(responseMapper::mapTo)
@@ -79,7 +79,7 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     }
 
     @Override
-    public ParkingLotResponseDto updateLot(Integer lotId, ParkingLotRequestDto requestDto) {
+    public ParkingLotResponseDto updateLot(Long lotId, ParkingLotRequestDto requestDto) {
 
         ParkingLot existingLot = findLotOrThrow(lotId);
 
@@ -124,7 +124,7 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     }
 
     @Override
-    public void toggleOpen(Integer lotId) {
+    public void toggleOpen(Long lotId) {
         log.info("Starting toggle open status for lotId={}", lotId);
         ParkingLot existingLot = findLotOrThrow(lotId);
         existingLot.setOpen(!existingLot.isOpen());
@@ -133,13 +133,13 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     }
 
     @Override
-    public void deleteLot(Integer lotId) {
+    public void deleteLot(Long lotId) {
         ParkingLot existingLot = findLotOrThrow(lotId);
         parkingLotRepository.delete(existingLot);
     }
 
     @Override
-    public void decrementAvailable(Integer lotId) {
+    public void decrementAvailable(Long lotId) {
         log.info("Decrementing available spots for lotId={}", lotId);
         ParkingLot existingLot = findLotOrThrow(lotId);
 
@@ -154,7 +154,7 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     }
 
     @Override
-    public void incrementAvailable(Integer lotId) {
+    public void incrementAvailable(Long lotId) {
         ParkingLot existingLot = findLotOrThrow(lotId);
 
         if (existingLot.getAvailableSpots() >= existingLot.getTotalSpots()) {
@@ -173,8 +173,8 @@ public class ParkingLotServiceImpl implements ParkingLotService {
                 .toList();
     }
 
-    private ParkingLot findLotOrThrow(Integer lotId) {
-        return parkingLotRepository.findById(lotId)
+    private ParkingLot findLotOrThrow(Long lotId) {
+        return (ParkingLot) parkingLotRepository.findById(lotId)
                 .orElseThrow(() -> new ParkingLotNotFoundException(
                         "Parking lot not found with id: " + lotId
                 ));

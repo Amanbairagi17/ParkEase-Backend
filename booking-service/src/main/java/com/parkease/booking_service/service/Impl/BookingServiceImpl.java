@@ -2,6 +2,8 @@ package com.parkease.booking_service.service.Impl;
 
 import com.parkease.booking_service.client.ParkingSpotServiceClient;
 import com.parkease.booking_service.client.ParkingLotServiceClient;
+import com.parkease.booking_service.dtos.BookingEstimateRequestDto;
+import com.parkease.booking_service.dtos.BookingEstimateResponseDto;
 import com.parkease.booking_service.dtos.BookingRequestDto;
 import com.parkease.booking_service.dtos.BookingResponseDto;
 import com.parkease.booking_service.dtos.ParkingSpotLookupResponseDto;
@@ -222,6 +224,41 @@ public class BookingServiceImpl implements BookingService {
                 .stream()
                 .map(bookingResponseMapper::mapTo)
                 .toList();
+    }
+
+    @Override
+    public BookingEstimateResponseDto estimateBooking(BookingEstimateRequestDto requestDto) {
+        log.info("Estimating booking. lotId={}, spotId={}, startTime={}, endTime={}",
+                requestDto.getLotId(), requestDto.getSpotId(), requestDto.getStartTime(), requestDto.getEndTime());
+
+        if (!requestDto.getEndTime().isAfter(requestDto.getStartTime())) {
+            throw new IllegalStateException("End time must be after start time");
+        }
+
+        ParkingSpotLookupResponseDto spot = fetchSpotOrThrow(requestDto.getSpotId());
+        if (!spot.getLotId().equals(requestDto.getLotId())) {
+            throw new IllegalStateException("Spot does not belong to the provided lot");
+        }
+
+        BigDecimal hourlyRate = spot.getPricePerHour() != null
+                ? BigDecimal.valueOf(spot.getPricePerHour())
+                : DEFAULT_HOURLY_RATE;
+
+        BigDecimal totalAmount = calculateAmount(requestDto.getStartTime(), requestDto.getEndTime(), hourlyRate);
+        long durationMinutes = Duration.between(requestDto.getStartTime(), requestDto.getEndTime()).toMinutes();
+
+        BookingEstimateResponseDto response = BookingEstimateResponseDto.builder()
+                .lotId(requestDto.getLotId())
+                .spotId(requestDto.getSpotId())
+                .startTime(requestDto.getStartTime())
+                .endTime(requestDto.getEndTime())
+                .totalAmount(totalAmount)
+                .hourlyRate(hourlyRate)
+                .durationMinutes(durationMinutes)
+                .build();
+
+        log.info("Booking estimate calculated. totalAmount={}, hourlyRate={}", totalAmount, hourlyRate);
+        return response;
     }
 
     private Booking findBookingOrThrow(Long bookingId) {

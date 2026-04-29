@@ -1,5 +1,7 @@
 package com.parkease.booking_service.service;
 
+import com.parkease.booking_service.dtos.BookingEstimateRequestDto;
+import com.parkease.booking_service.dtos.BookingEstimateResponseDto;
 import com.parkease.booking_service.dtos.BookingRequestDto;
 import com.parkease.booking_service.dtos.BookingResponseDto;
 
@@ -30,4 +32,6 @@ public interface BookingService {
     BigDecimal calculateAmount(LocalDateTime startTime, LocalDateTime endTime, BigDecimal hourlyRate);
 
     List<BookingResponseDto> getBookingHistory(Long userId);
+
+    BookingEstimateResponseDto estimateBooking(BookingEstimateRequestDto requestDto);
 }

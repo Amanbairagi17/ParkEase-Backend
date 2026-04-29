@@ -1,5 +1,7 @@
 package com.parkease.booking_service.controller;
 
+import com.parkease.booking_service.dtos.BookingEstimateRequestDto;
+import com.parkease.booking_service.dtos.BookingEstimateResponseDto;
 import com.parkease.booking_service.dtos.BookingRequestDto;
 import com.parkease.booking_service.dtos.BookingResponseDto;
 import com.parkease.booking_service.service.BookingService;
@@ -151,6 +153,18 @@ public class BookingController {
         List<BookingResponseDto> response = bookingService.getBookingHistory(userId);
 
         log.info("Returning {} historical bookings for userId={}", response.size(), userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/estimate")
+    public ResponseEntity<BookingEstimateResponseDto> estimateBooking(@Valid @RequestBody BookingEstimateRequestDto requestDto) {
+        log.info("Estimate request. lotId={}, spotId={}, startTime={}, endTime={}",
+                requestDto.getLotId(), requestDto.getSpotId(), requestDto.getStartTime(), requestDto.getEndTime());
+
+        BookingEstimateResponseDto response = bookingService.estimateBooking(requestDto);
+
+        log.info("Estimate response. totalAmount={}", response.getTotalAmount());
         return ResponseEntity.ok(response);
     }
 }

@@ -37,6 +37,18 @@ spring:
                 roles:
                   - PUBLIC
 
+        - id: user-service
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - MANAGER
+                  - ADMIN
+
         - id: vehicle-service
           uri: lb://VEHICLE-SERVICE
           predicates:
@@ -48,10 +60,24 @@ spring:
                   - DRIVER
                   - ADMIN
 
-        - id: parkinglot-service
+        - id: parkinglot-read
           uri: lb://PARKINGLOT-SERVICE
           predicates:
             - Path=/api/parking-lots/**
+            - Method=GET
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - MANAGER
+                  - ADMIN
+
+        - id: parkinglot-write
+          uri: lb://PARKINGLOT-SERVICE
+          predicates:
+            - Path=/api/parking-lots/**
+            - Method=POST,PUT,DELETE,PATCH
           filters:
             - name: RoleFilter
               args:
@@ -110,11 +136,23 @@ spring:
                   - DRIVER
                   - ADMIN
 
-        - id: payment-service
+        - id: payment-read
           uri: lb://PAYMENT-SERVICE
           predicates:
             - Path=/api/payments/**
-            - Method=POST,PUT,DELETE
+            - Method=GET
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - ADMIN
+
+        - id: payment-write
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payments/**
+            - Method=POST,PUT,DELETE,PATCH
           filters:
             - name: RoleFilter
               args:

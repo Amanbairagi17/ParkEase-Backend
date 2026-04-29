@@ -9,23 +9,23 @@ public interface ParkingLotService {
 
     ParkingLotResponseDto createLot(ParkingLotRequestDto requestDto);
 
-    ParkingLotResponseDto getLotById(Integer lotId);
+    ParkingLotResponseDto getLotById(Long lotId);
 
     List<ParkingLotResponseDto> getLotsByCity(String city);
 
     List<ParkingLotResponseDto> getNearbyLots(double latitude, double longitude, double radiusKm);
 
-    List<ParkingLotResponseDto> getLotsByManager(Integer managerId);
+    List<ParkingLotResponseDto> getLotsByManager(Long managerId);
 
-    ParkingLotResponseDto updateLot(Integer lotId, ParkingLotRequestDto requestDto);
+    ParkingLotResponseDto updateLot(Long lotId, ParkingLotRequestDto requestDto);
 
-    void toggleOpen(Integer lotId);
+    void toggleOpen(Long lotId);
 
-    void deleteLot(Integer lotId);
+    void deleteLot(Long lotId);
 
-    void decrementAvailable(Integer lotId);
+    void decrementAvailable(Long lotId);
 
-    void incrementAvailable(Integer lotId);
+    void incrementAvailable(Long lotId);
 
     List<ParkingLotResponseDto> searchLots(String keyword);
 }

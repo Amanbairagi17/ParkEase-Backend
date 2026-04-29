@@ -6,12 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface ParkingLotRepository extends JpaRepository<ParkingLot, Integer> {
+public interface ParkingLotRepository extends JpaRepository<ParkingLot, Long> {
 
     List<ParkingLot> findByCityIgnoreCase(String city);
 
-    List<ParkingLot> findByManagerId(Integer managerId);
+    List<ParkingLot> findByManagerId(Long managerId);
 
     List<ParkingLot> findByIsOpen(boolean open);
 
@@ -42,4 +43,6 @@ public interface ParkingLotRepository extends JpaRepository<ParkingLot, Integer>
     List<ParkingLot> searchByKeyword(@Param("keyword") String keyword);
 
     Integer findManagerIdByLotId(Integer lotId);
+
+    Optional<ParkingLot> findById(Long id);
 }
