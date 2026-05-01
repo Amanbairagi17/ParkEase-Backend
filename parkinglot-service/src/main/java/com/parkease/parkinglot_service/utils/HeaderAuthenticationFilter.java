@@ -26,7 +26,6 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
         String userId = request.getHeader("X-User-Id");
         String roles = request.getHeader("X-User-Roles");
 
-        // 🔍 Debug
         System.out.println("Incoming UserId: " + userId);
         System.out.println("Incoming Roles: " + roles);
 

@@ -156,3 +156,4 @@ public class ParkingSpotController {
         return ResponseEntity.ok(parkingSpotService.countAvailable(lotId));
     }
 }
+

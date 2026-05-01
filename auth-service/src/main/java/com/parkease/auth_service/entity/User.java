@@ -33,5 +33,11 @@ public class User {
     private LocalDateTime createdAt;
     private String profilePicUrl;
 
+    @Column(nullable = true)
+    private String provider;
+
+    @Column(nullable = true)
+    private String providerId;
+
 
 }

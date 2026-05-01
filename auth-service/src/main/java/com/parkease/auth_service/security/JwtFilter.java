@@ -1,4 +1,4 @@
-package com.parkease.auth_service.filter;
+package com.parkease.auth_service.security;
 
 import com.parkease.auth_service.entity.CustomUserDetails;
 import com.parkease.auth_service.service.Impl.JWTServiceImpl;

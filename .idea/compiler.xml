@@ -11,6 +11,7 @@
         <module name="auth-service" />
         <module name="payment-service" />
         <module name="vehicle-service" />
+        <module name="notification-sevice" />
         <module name="parkinglot-service" />
         <module name="booking-service" />
         <module name="api-gateway" />
@@ -24,6 +25,7 @@
       <module name="auth-service" options="-parameters" />
       <module name="booking-service" options="-parameters" />
       <module name="eureka-service" options="-parameters" />
+      <module name="notification-sevice" options="-parameters" />
       <module name="parkinglot-service" options="-parameters" />
       <module name="parkingspot-service" options="-parameters" />
       <module name="payment-service" options="-parameters" />

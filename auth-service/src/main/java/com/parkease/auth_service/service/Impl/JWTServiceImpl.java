@@ -67,6 +67,7 @@ public class JWTServiceImpl implements JWTService {
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .signWith(getKey())
                 .compact();
+
     }
 
     @Override

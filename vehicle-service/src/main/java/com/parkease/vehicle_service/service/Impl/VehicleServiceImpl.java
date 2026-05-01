@@ -11,6 +11,7 @@ import com.parkease.vehicle_service.mapper.Impl.VehicleRequestMapper;
 import com.parkease.vehicle_service.mapper.Impl.VehicleResponseMapper;
 import com.parkease.vehicle_service.repository.VehicleRepository;
 import com.parkease.vehicle_service.service.VehicleService;
+import com.parkease.vehicle_service.utils.SecurityUtils;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -32,10 +33,14 @@ public class VehicleServiceImpl implements VehicleService {
     private final VehicleResponseMapper responseMapper;
     private final UserServiceClient userServiceClient;
     private final HttpServletRequest request;
+   // private final SecurityUtils utils;
+
 
     @Override
     public VehicleResponseDto createVehicle(VehicleRequestDto requestDto) {
-         Long ownerId = requestDto.getOwnerId();
+         log.info("request dto : " +requestDto.toString());
+         Long ownerId = Long.parseLong(request.getHeader("X-User-Id"));
+         log.info("Owner ID : {}", ownerId);
 
          UserLookupResponseDto responseDto = userServiceClient.getUserById(ownerId);
          log.info("Starting vehicle creation for email={}", responseDto.getEmail());
@@ -45,8 +50,10 @@ public class VehicleServiceImpl implements VehicleService {
          vehicle.setOwnerId(ownerId);
          log.info("Assigning owner to vehicle ");
 
+         log.info("Vehicle Type : " +requestDto.getVehicleType());
          vehicle.setVehicleType(parseVehicleType(requestDto.getVehicleType()));
          vehicle.setRegisteredAt(LocalDateTime.now());
+        log.info("Vehicle Type after assigning vehicle : " +requestDto.getVehicleType());
 
          Vehicle createdVehicle = repository.save(vehicle);
         log.info("Vehicle saved successfully with id={}", createdVehicle.getVehicleId());

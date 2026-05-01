@@ -29,4 +29,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     BigDecimal sumAmountByBookingIds(@Param("bookingIds") List<Long> bookingIds);
 
     long countByUserId(Long userId);
+
+    Long findUserIdByPaymentId(Long paymentId);
+
+    Long findUserIdByBookingId(Long bookingId);
 }

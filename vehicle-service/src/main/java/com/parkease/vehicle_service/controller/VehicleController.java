@@ -2,9 +2,11 @@ package com.parkease.vehicle_service.controller;
 
 import com.parkease.vehicle_service.dtos.VehicleRequestDto;
 import com.parkease.vehicle_service.service.Impl.VehicleServiceImpl;
+import com.parkease.vehicle_service.service.VehicleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.parkease.vehicle_service.dtos.VehicleResponseDto;
 
@@ -13,13 +15,14 @@ import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@RequestMapping(path = "/api/vehicle")
+@RequestMapping("/api/vehicle")
 @RequiredArgsConstructor
 @Slf4j
 public class VehicleController {
 
-    private final VehicleServiceImpl vehicleService;
+    private final VehicleService vehicleService;
 
+    @PreAuthorize("hasAnyRole('DRIVER','ADMIN')")
     @PostMapping("/register")
     public ResponseEntity<VehicleResponseDto> registerVehicle(@RequestBody VehicleRequestDto requestDto){
         log.info("Request received to register vehicle. licensePlate={}", requestDto.getLicensePlate());
@@ -28,12 +31,14 @@ public class VehicleController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @vehicleSecurity.isOwner(#vehicleId)")
     @GetMapping("/getById/{vehicleId}")
     public ResponseEntity<VehicleResponseDto> getVehicleById(@PathVariable Long vehicleId){
         VehicleResponseDto response = vehicleService.findVehicleById(vehicleId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or #ownerId.toString() == authentication.principal.userId")
     @GetMapping("/getVehiclesByOwner/{ownerId}")
     public ResponseEntity<List<VehicleResponseDto>> getVehiclesByOwner(@PathVariable Long ownerId){
         log.info("Request received to fetch vehicles. ownerId={}", ownerId);
@@ -42,18 +47,21 @@ public class VehicleController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PreAuthorize("hasAnyRole('DRIVER','ADMIN')")
     @GetMapping("/getByLicensePlate/{licensePlate}")
     public ResponseEntity<VehicleResponseDto> getByLicensePlate(@PathVariable String licensePlate){
         VehicleResponseDto response = vehicleService.getByLicensePlate(licensePlate);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @vehicleSecurity.isOwner(#vehicleId)")
     @PutMapping("/update/{vehicleId}")
     public ResponseEntity<VehicleResponseDto> updateVehicle(@PathVariable Long vehicleId, @RequestBody VehicleRequestDto requestDto){
         VehicleResponseDto response = vehicleService.updateVehicle(vehicleId, requestDto);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @vehicleSecurity.isOwner(#vehicleId)")
     @DeleteMapping("/delete/{vehicleId}")
     public ResponseEntity<String> deleteVehicle(@PathVariable Long vehicleId){
         log.info("Request received to delete vehicle. vehicleId={}", vehicleId);
@@ -62,27 +70,30 @@ public class VehicleController {
         return ResponseEntity.status(HttpStatus.OK).body("Vehicle deleted successfully");
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/getVehicleType/{vehicleId}")
     public ResponseEntity<String> getVehicleType(@PathVariable Long vehicleId){
         String response = vehicleService.getVehicleType(vehicleId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/isEVVehicle/{vehicleId}")
     public ResponseEntity<Boolean> isEVVehicle(@PathVariable Long vehicleId){
         Boolean response = vehicleService.isEVVehicle(vehicleId);
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/getAllVehicles")
     public ResponseEntity<List<VehicleResponseDto>> getAllVehicles(){
         List<VehicleResponseDto> response = vehicleService.getAllVehicles();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PreAuthorize("permitAll()")
     @GetMapping("/types")
     public ResponseEntity<List<String>> getAvailableVehicleTypes() {
         return ResponseEntity.status(HttpStatus.OK).body(List.of("2W", "3W", "4W", "HEAVY"));
     }
-
 }

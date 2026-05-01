@@ -2,7 +2,6 @@ package com.parkease.parkingspot_service.utils;
 
 import com.parkease.parkingspot_service.client.ParkingLotServiceClient;
 import com.parkease.parkingspot_service.dtos.ParkingLotLookupResponseDto;
-import com.parkease.parkingspot_service.entity.ParkingSpot;
 import com.parkease.parkingspot_service.repository.ParkingSpotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ParkingLotSecurity {
 
-    private final ParkingSpotRepository parkingSpotRepository;
     private final ParkingLotServiceClient parkingLotServiceClient;
 
     public boolean isOwner(Long spotId) {
@@ -25,7 +23,6 @@ public class ParkingLotSecurity {
 
 //        ParkingSpot spot = parkingSpotRepository.findById(spotId)
 //                .orElse(null);
-//
 //        if (spot == null) return false;
 
         // 🔥 Call another service

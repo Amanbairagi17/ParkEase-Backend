@@ -31,14 +31,14 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isBookingOwner(#bookingId)")
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<PaymentResponseDto> getByBookingId(@PathVariable Long bookingId) {
         log.info("Fetching payment for bookingId={}", bookingId);
         return ResponseEntity.ok(paymentService.getByBookingId(bookingId));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<PaymentResponseDto>> getByUserId(@PathVariable Long userId) {
         log.info("Fetching payments for userId={}", userId);
@@ -54,14 +54,14 @@ public class PaymentController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isOwner(#paymentId)")
     @GetMapping("/{paymentId}/status")
     public ResponseEntity<String> getPaymentStatus(@PathVariable Long paymentId) {
         log.info("Fetching payment status. paymentId={}", paymentId);
         return ResponseEntity.ok(paymentService.getPaymentStatus(paymentId));
     }
 
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
     @GetMapping("/history/{userId}")
     public ResponseEntity<List<PaymentResponseDto>> getTransactionHistory(@PathVariable Long userId) {
         log.info("Fetching transaction history for userId={}", userId);
@@ -75,7 +75,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getAllPayments());
     }
 
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
     @GetMapping("/revenue/{userId}")
     public ResponseEntity<BigDecimal> getTotalRevenue(@PathVariable Long userId) {
         log.info("Fetching total revenue for userId={}", userId);

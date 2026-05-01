@@ -1,6 +1,8 @@
 package com.parkease.auth_service.config;
 
-import com.parkease.auth_service.filter.JwtFilter;
+import com.parkease.auth_service.security.JwtFilter;
+import com.parkease.auth_service.security.OAuth2FailureHandler;
+import com.parkease.auth_service.security.OAuth2SuccessHandler;
 import com.parkease.auth_service.service.Impl.UserDetailServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -14,9 +16,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-
-import java.util.List;
-
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
@@ -24,20 +23,25 @@ public class SecurityConfig {
 
     private final UserDetailServiceImpl userDetailService;
     private final JwtFilter jwtFilter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
         http
-                .csrf(customizer -> customizer.disable())
-                .authorizeHttpRequests(request ->{
-                    request.requestMatchers("api/auth/**","/user/**", "/api/user/**")
-                            .permitAll()
-                            .anyRequest()
-                            .authenticated();
-                })
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**", "/api/user/**", "/user/**", "/oauth2/**", "/login/oauth2/**").permitAll()
+                        .anyRequest().authenticated()
+                )
                 .httpBasic(Customizer.withDefaults())
                 .userDetailsService(userDetailService)
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
+                );
+
         return http.build();
     }
 

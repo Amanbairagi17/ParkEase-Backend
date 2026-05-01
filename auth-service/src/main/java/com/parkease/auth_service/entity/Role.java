@@ -4,5 +4,5 @@ public enum Role {
     DRIVER,
     LOT_MANAGER,
     ADMIN,
-    MANAGER
+    MANAGER;
 }

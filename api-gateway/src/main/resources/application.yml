@@ -28,7 +28,7 @@ spring:
       routes:
 
         - id: auth-service
-          uri: lb://AUTH-SERVICE
+          uri: lb://auth-service
           predicates:
             - Path=/api/auth/**
           filters:
@@ -37,8 +37,28 @@ spring:
                 roles:
                   - PUBLIC
 
+        - id: oauth2-authorization
+          uri: lb://auth-service
+          predicates:
+            - Path=/oauth2/authorization/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - PUBLIC
+
+        - id: oauth2-callback
+          uri: lb://auth-service
+          predicates:
+            - Path=/login/oauth2/code/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - PUBLIC
+
         - id: user-service
-          uri: lb://AUTH-SERVICE
+          uri: lb://auth-service
           predicates:
             - Path=/api/user/**
           filters:
@@ -50,7 +70,7 @@ spring:
                   - ADMIN
 
         - id: vehicle-service
-          uri: lb://VEHICLE-SERVICE
+          uri: lb://vehicle-service
           predicates:
             - Path=/api/vehicle/**
           filters:
@@ -61,7 +81,7 @@ spring:
                   - ADMIN
 
         - id: parkinglot-read
-          uri: lb://PARKINGLOT-SERVICE
+          uri: lb://parkinglot-service
           predicates:
             - Path=/api/parking-lots/**
             - Method=GET
@@ -74,7 +94,7 @@ spring:
                   - ADMIN
 
         - id: parkinglot-write
-          uri: lb://PARKINGLOT-SERVICE
+          uri: lb://parkinglot-service
           predicates:
             - Path=/api/parking-lots/**
             - Method=POST,PUT,DELETE,PATCH
@@ -86,7 +106,7 @@ spring:
                   - ADMIN
 
         - id: parkingspot-read
-          uri: lb://PARKINGSPOT-SERVICE
+          uri: lb://parkingspot-service
           predicates:
             - Path=/api/parking-spots/**
             - Method=GET
@@ -99,7 +119,7 @@ spring:
                   - ADMIN
 
         - id: parkingspot-write
-          uri: lb://PARKINGSPOT-SERVICE
+          uri: lb://parkingspot-service
           predicates:
             - Path=/api/parking-spots/**
             - Method=POST,PUT,DELETE,PATCH
@@ -112,7 +132,7 @@ spring:
                   - DRIVER
 
         - id: booking-read
-          uri: lb://BOOKING-SERVICE
+          uri: lb://booking-service
           predicates:
             - Path=/api/bookings/**
             - Method=GET
@@ -125,7 +145,7 @@ spring:
                   - ADMIN
 
         - id: booking-write
-          uri: lb://BOOKING-SERVICE
+          uri: lb://booking-service
           predicates:
             - Path=/api/bookings/**
             - Method=POST,PUT,DELETE
@@ -137,7 +157,7 @@ spring:
                   - ADMIN
 
         - id: payment-read
-          uri: lb://PAYMENT-SERVICE
+          uri: lb://payment-service
           predicates:
             - Path=/api/payments/**
             - Method=GET
@@ -149,7 +169,7 @@ spring:
                   - ADMIN
 
         - id: payment-write
-          uri: lb://PAYMENT-SERVICE
+          uri: lb://payment-service
           predicates:
             - Path=/api/payments/**
             - Method=POST,PUT,DELETE,PATCH
