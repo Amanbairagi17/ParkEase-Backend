@@ -10,15 +10,19 @@ import com.parkease.booking_service.dtos.ParkingSpotLookupResponseDto;
 import com.parkease.booking_service.entity.Booking;
 import com.parkease.booking_service.entity.BookingStatus;
 import com.parkease.booking_service.entity.BookingType;
+import com.parkease.booking_service.event.NotificationEventPublisher;
 import com.parkease.booking_service.exception.BookingNotFoundException;
 import com.parkease.booking_service.mapper.Impl.BookingRequestMapper;
 import com.parkease.booking_service.mapper.Impl.BookingResponseMapper;
 import com.parkease.booking_service.repository.BookingRepository;
 import com.parkease.booking_service.service.BookingService;
 import feign.FeignException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -41,12 +45,16 @@ public class BookingServiceImpl implements BookingService {
     private final BookingResponseMapper bookingResponseMapper;
     private final ParkingSpotServiceClient parkingSpotServiceClient;
     private final ParkingLotServiceClient parkingLotServiceClient;
+    private final NotificationEventPublisher notificationPublisher;
 
     @Override
-    public BookingResponseDto createBooking(BookingRequestDto requestDto) {
-        log.info("Starting booking creation for userId={}, spotId={}, lotId={}", requestDto.getUserId(), requestDto.getSpotId(), requestDto.getLotId());
+    public BookingResponseDto createBooking(@RequestBody @Valid BookingRequestDto requestDto){
+        log.info("Starting booking creation for userId={}, spotId={}, lotId={}",
+                requestDto.getUserId(), requestDto.getSpotId(), requestDto.getLotId());
+
         bookingRepository.findActiveBySpotId(requestDto.getSpotId()).ifPresent(existing -> {
-            log.error("Booking creation failed. Active booking exists for spotId={}", requestDto.getSpotId());
+            log.error("Booking creation failed. Active booking exists for spotId={}",
+                    requestDto.getSpotId());
             throw new IllegalStateException("An active or reserved booking already exists for spot id: "
                     + requestDto.getSpotId());
         });
@@ -70,10 +78,22 @@ public class BookingServiceImpl implements BookingService {
 
         try {
             Booking savedBooking = bookingRepository.save(booking);
-            log.info("Booking created successfully. bookingId={}, status={}", savedBooking.getBookingId(), savedBooking.getStatus());
+            log.info("Booking created successfully. bookingId={}, status={}",
+                    savedBooking.getBookingId(), savedBooking.getStatus());
+
+            // ── Publish notification event ──────────────────────
+            notificationPublisher.publishBookingConfirmed(
+                    savedBooking.getUserId(),
+                    savedBooking.getBookingId(),
+                    requestDto.getEmail()   // null safe — publisher handles null email
+            );
+            // ────────────────────────────────────────────────────
+
             return bookingResponseMapper.mapTo(savedBooking);
+
         } catch (RuntimeException exception) {
-            log.error("Error creating booking. Releasing spot and incrementing lot availability for spotId={}, lotId={}", requestDto.getSpotId(), requestDto.getLotId(), exception);
+            log.error("Error creating booking. Releasing spot and incrementing lot availability " +
+                    "for spotId={}, lotId={}", requestDto.getSpotId(), requestDto.getLotId(), exception);
             releaseSpotOrThrow(requestDto.getSpotId());
             incrementLotAvailabilityOrThrow(requestDto.getLotId());
             throw exception;

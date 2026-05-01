@@ -34,4 +34,6 @@ public class BookingRequestDto {
 
     @NotNull(message = "Start time is required")
     private LocalDateTime startTime;
+
+    private String email;
 }

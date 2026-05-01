@@ -20,7 +20,8 @@ public class RouteValidator {
             "/api/v1/subscriptions/details",
             "/login/oauth2/code/google",
             "/api/auth/refresh",
-            "/api/auth/logout"
+            "/api/auth/logout",
+            "/api/notifications/send"
     );
 
     public Predicate<String> isSecured = uri -> {

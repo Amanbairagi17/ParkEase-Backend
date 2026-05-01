@@ -29,6 +29,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentResponseMapper responseMapper;
     private final PaymentRequestMapper requestMapper;
+    private final com.parkease.payment_service.event.NotificationEventPublisher notificationPublisher;
 
     @Override
     @Transactional
@@ -45,7 +46,16 @@ public class PaymentServiceImpl implements PaymentService {
         Payment saved = paymentRepository.save(payment);
         log.info("Payment processed successfully. paymentId={}, transactionId={}", 
                 saved.getPaymentId(), saved.getTransactionId());
-        return responseMapper.mapTo(payment);
+
+        // Publish event
+        notificationPublisher.publishPaymentSuccess(
+                saved.getUserId(), 
+                saved.getBookingId(), 
+                saved.getAmount(), 
+                saved.getTransactionId()
+        );
+
+        return responseMapper.mapTo(saved);
     }
 
     @Override

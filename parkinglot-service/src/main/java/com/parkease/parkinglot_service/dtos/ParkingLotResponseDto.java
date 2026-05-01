@@ -8,7 +8,7 @@ import java.time.LocalTime;
 @Data
 public class ParkingLotResponseDto {
 
-    private Integer lotId;
+    private Long lotId;
     private String name;
     private String address;
     private String city;
@@ -16,7 +16,7 @@ public class ParkingLotResponseDto {
     private Double longitude;
     private Integer totalSpots;
     private Integer availableSpots;
-    private Integer managerId;
+    private Long managerId;
     private Boolean open;
     private Boolean approved;
     private LocalTime openTime;

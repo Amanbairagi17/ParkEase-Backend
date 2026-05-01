@@ -1,4 +1,4 @@
-package com.parkeas.notification_sevice;
+package com.parkeas.notification_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

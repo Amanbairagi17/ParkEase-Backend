@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface ParkingLotRepository extends JpaRepository<ParkingLot, Long> {
 
@@ -19,8 +18,6 @@ public interface ParkingLotRepository extends JpaRepository<ParkingLot, Long> {
     List<ParkingLot> findByAvailableSpotsGreaterThan(int availableSpots);
 
     int countByCityIgnoreCase(String city);
-
-    void deleteByLotId(int lotId);
 
     @Query(value = """
             SELECT * FROM parking_lots p
@@ -42,7 +39,6 @@ public interface ParkingLotRepository extends JpaRepository<ParkingLot, Long> {
             """)
     List<ParkingLot> searchByKeyword(@Param("keyword") String keyword);
 
-    Integer findManagerIdByLotId(Integer lotId);
-
-    Optional<ParkingLot> findById(Long id);
+    @Query("SELECT p.managerId FROM ParkingLot p WHERE p.lotId = :lotId")
+    Long findManagerIdByLotId(@Param("lotId") Long lotId);
 }

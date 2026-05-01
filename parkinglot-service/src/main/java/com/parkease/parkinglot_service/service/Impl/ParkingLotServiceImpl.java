@@ -87,7 +87,7 @@ public class ParkingLotServiceImpl implements ParkingLotService {
 
         // ✅ Optional ownership check (recommended)
         // If manager, must own the lot
-        if (existingLot.getManagerId() != (requestDto.getManagerId())) {
+        if (!existingLot.getManagerId().equals(requestDto.getManagerId())) {
             log.warn("Manager trying to update another manager's lot");
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -180,9 +180,9 @@ public class ParkingLotServiceImpl implements ParkingLotService {
                 ));
     }
 
-    private void validateManagerOrAdmin(Integer managerId) {
+    private void validateManagerOrAdmin(Long managerId) {
         try {
-            UserLookupResponseDto user = userServiceClient.getUserById(managerId.longValue());
+            UserLookupResponseDto user = userServiceClient.getUserById(managerId);
             String role = user.getRole();
 
             if (role == null) {

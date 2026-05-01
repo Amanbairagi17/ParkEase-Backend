@@ -30,7 +30,10 @@ public class BookingController {
 
     @PreAuthorize("hasRole('DRIVER')")
     @PostMapping
-    public ResponseEntity<BookingResponseDto> createBooking(@Valid @RequestBody BookingRequestDto requestDto) {
+    public ResponseEntity<BookingResponseDto> createBooking(@Valid @RequestBody BookingRequestDto requestDto,
+                                                            @RequestHeader(value = "X-User-Name", required = false) String email) {
+        requestDto.setEmail(email); // inject email from gateway header
+
         log.info("Request received to create booking. userId={}, spotId={}, lotId={}",
                 requestDto.getUserId(), requestDto.getSpotId(), requestDto.getLotId());
 

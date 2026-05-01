@@ -180,6 +180,18 @@ spring:
                   - DRIVER
                   - ADMIN
 
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - MANAGER
+                  - ADMIN
+
 eureka:
   client:
     service-url:

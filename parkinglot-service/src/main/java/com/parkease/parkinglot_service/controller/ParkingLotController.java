@@ -126,7 +126,7 @@ public class ParkingLotController {
     }
 
     //  INTERNAL (only system/admin)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @PatchMapping("/{lotId}/decrement-available")
     public ResponseEntity<Void> decrementAvailable(@PathVariable Long lotId) {
 
@@ -138,7 +138,7 @@ public class ParkingLotController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @PatchMapping("/{lotId}/increment-available")
     public ResponseEntity<Void> incrementAvailable(@PathVariable Long lotId) {
 

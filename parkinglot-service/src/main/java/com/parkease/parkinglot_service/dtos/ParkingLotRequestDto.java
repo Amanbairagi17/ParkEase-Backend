@@ -37,7 +37,7 @@ public class ParkingLotRequestDto {
 
     @NotNull(message = "Manager id is required")
     @Positive(message = "Manager id must be greater than 0")
-    private Integer managerId;
+    private Long managerId;
 
     @NotNull(message = "Open status is required")
     private Boolean open;

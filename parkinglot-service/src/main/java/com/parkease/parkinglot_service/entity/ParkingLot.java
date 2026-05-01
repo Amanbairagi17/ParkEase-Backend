@@ -13,7 +13,7 @@ public class ParkingLot {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int lotId;
+    private Long lotId;
 
     @Column(nullable = false)
     private String name;
@@ -28,12 +28,12 @@ public class ParkingLot {
     private double longitude;
 
     @Column(nullable = false)
-    private int totalSpots;
+    private Long totalSpots;
 
-    private int availableSpots;
+    private Long availableSpots;
 
     @Column(nullable = false)
-    private int managerId;
+    private Long managerId;
 
     @Column(nullable = false)
     private boolean isOpen;

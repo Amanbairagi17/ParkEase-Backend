@@ -29,6 +29,7 @@ public class User {
     private Role role;
 
     private String vehiclePlate;
+    private String address;
     private Boolean isActive;
     private LocalDateTime createdAt;
     private String profilePicUrl;

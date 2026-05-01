@@ -1,7 +1,7 @@
-package com.parkeas.notification_sevice.dtos;
+package com.parkeas.notification_service.dtos;
 
-import com.parkeas.notification_sevice.entity.NotificationChannel;
-import com.parkeas.notification_sevice.entity.NotificationType;
+import com.parkeas.notification_service.entity.NotificationChannel;
+import com.parkeas.notification_service.entity.NotificationType;
 import lombok.Data;
 
 @Data
