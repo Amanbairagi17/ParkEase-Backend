@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
     }
 
 
-    @ExceptionHandler(RuntimeException.class)
+@ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRunTimeException(RuntimeException exception){
         log.info(exception.getMessage());
 
@@ -38,9 +38,9 @@ public class GlobalExceptionHandler {
 
         errorResponse.setTimeStamp(LocalDateTime.now());
         errorResponse.setMessage("Runtime Exception in application");
-        errorResponse.setStatus(HttpStatus.NO_CONTENT.value());
+        errorResponse.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
         errorResponse.setError(exception.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

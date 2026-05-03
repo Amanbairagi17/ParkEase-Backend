@@ -161,11 +161,17 @@ public class VehicleServiceImpl implements VehicleService {
                 .toList();
     }
 
-    private VehicleType parseVehicleType(String type) {
-        return switch (type) {
-            case "2W" -> VehicleType.TWO_WHEELER;
-            case "3W" -> VehicleType.THREE_WHEELER;
-            case "4W" -> VehicleType.FOUR_WHEELER;
+private VehicleType parseVehicleType(String type) {
+        if (type == null || type.isBlank()) {
+            throw new IllegalArgumentException("Vehicle type cannot be empty");
+        }
+        
+        String normalized = type.trim().toUpperCase();
+        
+        return switch (normalized) {
+            case "TWO_WHEELER", "2W" -> VehicleType.TWO_WHEELER;
+            case "THREE_WHEELER", "3W" -> VehicleType.THREE_WHEELER;
+            case "FOUR_WHEELER", "4W" -> VehicleType.FOUR_WHEELER;
             case "HEAVY" -> VehicleType.HEAVY;
             default -> throw new IllegalArgumentException("Invalid vehicle type: " + type);
         };

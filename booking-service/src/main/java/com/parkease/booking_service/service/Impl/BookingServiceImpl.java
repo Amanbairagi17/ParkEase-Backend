@@ -10,6 +10,7 @@ import com.parkease.booking_service.dtos.ParkingSpotLookupResponseDto;
 import com.parkease.booking_service.entity.Booking;
 import com.parkease.booking_service.entity.BookingStatus;
 import com.parkease.booking_service.entity.BookingType;
+import com.parkease.booking_service.entity.PricingType;
 import com.parkease.booking_service.event.NotificationEventPublisher;
 import com.parkease.booking_service.exception.BookingNotFoundException;
 import com.parkease.booking_service.mapper.Impl.BookingRequestMapper;
@@ -21,6 +22,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,6 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 public class BookingServiceImpl implements BookingService {
 
     private static final BigDecimal DEFAULT_HOURLY_RATE = new BigDecimal("50.00");
+    private static final BigDecimal DEFAULT_DAILY_RATE = new BigDecimal("500.00");
 
     private final BookingRepository bookingRepository;
     private final BookingRequestMapper bookingRequestMapper;
@@ -48,9 +51,13 @@ public class BookingServiceImpl implements BookingService {
     private final NotificationEventPublisher notificationPublisher;
 
     @Override
-    public BookingResponseDto createBooking(@RequestBody @Valid BookingRequestDto requestDto){
+    public BookingResponseDto createBooking(@RequestBody @Valid BookingRequestDto requestDto) {
         log.info("Starting booking creation for userId={}, spotId={}, lotId={}",
                 requestDto.getUserId(), requestDto.getSpotId(), requestDto.getLotId());
+
+        if (requestDto.getEndTime() == null || !requestDto.getEndTime().isAfter(requestDto.getStartTime())) {
+            throw new IllegalStateException("End time must be after start time");
+        }
 
         bookingRepository.findActiveBySpotId(requestDto.getSpotId()).ifPresent(existing -> {
             log.error("Booking creation failed. Active booking exists for spotId={}",
@@ -72,22 +79,34 @@ public class BookingServiceImpl implements BookingService {
 
         Booking booking = bookingRequestMapper.mapFrom(requestDto);
         booking.setStatus(BookingStatus.RESERVED);
-        if (booking.getBookingType() == null) {
-            booking.setBookingType(BookingType.WALK_IN);
-        }
 
+        BigDecimal hourlyRate = spot.getPricePerHour() != null
+                ? BigDecimal.valueOf(spot.getPricePerHour())
+                : DEFAULT_HOURLY_RATE;
+
+        // Daily rate assumed as 10x hourly if not explicitly provided
+        BigDecimal dailyRate = hourlyRate.multiply(BigDecimal.valueOf(10));
+
+        BigDecimal amount = calculateAmount(
+                booking.getStartTime(), booking.getEndTime(),
+                booking.getPricingType(), hourlyRate, dailyRate);
+        booking.setTotalAmount(amount);
+
+        long minutes = Duration.between(booking.getStartTime(), booking.getEndTime()).toMinutes();
+        booking.setDuration(formatDuration(minutes));
+        log.info("Calculated amount BEFORE save: {}", amount);
         try {
-            Booking savedBooking = bookingRepository.save(booking);
-            log.info("Booking created successfully. bookingId={}, status={}",
-                    savedBooking.getBookingId(), savedBooking.getStatus());
 
-            // ── Publish notification event ──────────────────────
+            Booking savedBooking = bookingRepository.save(booking);
+            log.info("Booking created successfully. bookingId={}, status={}, amount={}",
+                    savedBooking.getBookingId(), savedBooking.getStatus(), savedBooking.getTotalAmount());
+
             notificationPublisher.publishBookingConfirmed(
                     savedBooking.getUserId(),
                     savedBooking.getBookingId(),
-                    requestDto.getEmail()   // null safe — publisher handles null email
+                    requestDto.getEmail()
             );
-            // ────────────────────────────────────────────────────
+            log.info("Calculated amount AFTER save: {}", savedBooking.getTotalAmount());
 
             return bookingResponseMapper.mapTo(savedBooking);
 
@@ -98,6 +117,15 @@ public class BookingServiceImpl implements BookingService {
             incrementLotAvailabilityOrThrow(requestDto.getLotId());
             throw exception;
         }
+    }
+
+    private String formatDuration(long totalMinutes) {
+        long hours = totalMinutes / 60;
+        long minutes = totalMinutes % 60;
+        if (hours > 0) {
+            return String.format("%dh %dm", hours, minutes);
+        }
+        return String.format("%dm", minutes);
     }
 
     @Override
@@ -131,6 +159,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional
     public BookingResponseDto cancelBooking(Long bookingId) {
         Booking booking = findBookingOrThrow(bookingId);
 
@@ -144,18 +173,29 @@ public class BookingServiceImpl implements BookingService {
         }
 
         releaseSpotOrThrow(booking.getSpotId());
+        incrementLotAvailabilityOrThrow(booking.getLotId());
 
         Booking updated = bookingRepository.save(booking);
+
+        // FIX B-6: email not stored on Booking, pass null — publisher falls back to APP channel
+        notificationPublisher.publishBookingCancelled(
+                updated.getUserId(),
+                updated.getBookingId(),
+                null
+        );
+
         return bookingResponseMapper.mapTo(updated);
     }
 
     @Override
+    @Transactional
     public BookingResponseDto checkIn(Long bookingId) {
         log.info("Starting check-in for bookingId={}", bookingId);
         Booking booking = findBookingOrThrow(bookingId);
 
         if (booking.getStatus() != BookingStatus.RESERVED) {
-            log.warn("Check-in failed. Booking is not in RESERVED status. bookingId={}, currentStatus={}", bookingId, booking.getStatus());
+            log.warn("Check-in failed. Booking is not in RESERVED status. bookingId={}, currentStatus={}",
+                    bookingId, booking.getStatus());
             throw new IllegalStateException("Only reserved bookings can be checked in");
         }
 
@@ -163,16 +203,26 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.ACTIVE);
         Booking updated = bookingRepository.save(booking);
         log.info("Check-in successful. bookingId={}", bookingId);
+
+        // FIX B-6: email not stored on Booking, pass null — publisher falls back to APP channel
+        notificationPublisher.publishCheckIn(
+                updated.getUserId(),
+                updated.getBookingId(),
+                null
+        );
+
         return bookingResponseMapper.mapTo(updated);
     }
 
     @Override
+    @Transactional
     public BookingResponseDto checkOut(Long bookingId, BigDecimal hourlyRate) {
         log.info("Starting check-out for bookingId={}", bookingId);
         Booking booking = findBookingOrThrow(bookingId);
 
         if (booking.getStatus() != BookingStatus.ACTIVE) {
-            log.warn("Check-out failed. Booking is not in ACTIVE status. bookingId={}, currentStatus={}", bookingId, booking.getStatus());
+            log.warn("Check-out failed. Booking is not in ACTIVE status. bookingId={}, currentStatus={}",
+                    bookingId, booking.getStatus());
             throw new IllegalStateException("Only active bookings can be checked out");
         }
 
@@ -185,13 +235,40 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.COMPLETED);
 
         releaseSpotOrThrow(booking.getSpotId());
+        incrementLotAvailabilityOrThrow(booking.getLotId());
 
         Booking updated = bookingRepository.save(booking);
         log.info("Check-out successful. bookingId={}, totalAmount={}", bookingId, totalAmount);
+
+        // FIX B-6: email not stored on Booking (pass null); convert BigDecimal to String for publisher
+        notificationPublisher.publishCheckOut(
+                updated.getUserId(),
+                updated.getBookingId(),
+                null,
+                updated.getTotalAmount().toPlainString()
+        );
+
         return bookingResponseMapper.mapTo(updated);
     }
 
     @Override
+    @Transactional
+    public BookingResponseDto markAsPaid(Long bookingId) {
+        log.info("Marking booking as paid. bookingId={}", bookingId);
+        Booking booking = findBookingOrThrow(bookingId);
+        booking.setPaid(true);
+
+        if (booking.getDuration() == null && booking.getStartTime() != null && booking.getEndTime() != null) {
+            long minutes = Duration.between(booking.getStartTime(), booking.getEndTime()).toMinutes();
+            booking.setDuration(formatDuration(minutes));
+        }
+
+        Booking saved = bookingRepository.save(booking);
+        return bookingResponseMapper.mapTo(saved);
+    }
+
+    @Override
+    @Transactional
     public BookingResponseDto extendBooking(Long bookingId, LocalDateTime newEndTime) {
         Booking booking = findBookingOrThrow(bookingId);
 
@@ -209,33 +286,50 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setEndTime(newEndTime);
+
+        BigDecimal hourlyRate = DEFAULT_HOURLY_RATE;
+        BigDecimal dailyRate = hourlyRate.multiply(BigDecimal.valueOf(10));
+
+        BigDecimal amount = calculateAmount(
+                booking.getStartTime(), booking.getEndTime(),
+                booking.getPricingType(), hourlyRate, dailyRate);
+        booking.setTotalAmount(amount);
+
+        long minutes = Duration.between(booking.getStartTime(), booking.getEndTime()).toMinutes();
+        booking.setDuration(formatDuration(minutes));
+
         Booking updated = bookingRepository.save(booking);
         return bookingResponseMapper.mapTo(updated);
     }
 
     @Override
-    public BigDecimal calculateAmount(LocalDateTime startTime, LocalDateTime endTime, BigDecimal hourlyRate) {
+    public BigDecimal calculateAmount(LocalDateTime startTime, LocalDateTime endTime,
+                                      PricingType type, BigDecimal hourlyRate, BigDecimal dailyRate) {
         if (startTime == null || endTime == null) {
             throw new IllegalStateException("Start time and end time are required");
         }
-
-        if (hourlyRate == null) {
-            throw new IllegalStateException("Hourly rate is required");
-        }
-
-        if (hourlyRate.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalStateException("Hourly rate cannot be negative");
-        }
-
         if (!endTime.isAfter(startTime)) {
             throw new IllegalStateException("End time must be after start time");
         }
 
-        long totalMinutes = Duration.between(startTime, endTime).toMinutes();
-        BigDecimal totalHours = BigDecimal.valueOf(totalMinutes)
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.CEILING);
+        BigDecimal hRate = hourlyRate == null ? DEFAULT_HOURLY_RATE : hourlyRate;
+        BigDecimal dRate = dailyRate == null ? DEFAULT_DAILY_RATE : dailyRate;
 
-        return totalHours.multiply(hourlyRate).setScale(2, RoundingMode.HALF_UP);
+        Duration duration = Duration.between(startTime, endTime);
+        long totalMinutes = duration.toMinutes();
+
+        if (type == PricingType.DAILY) {
+            long days = (long) Math.ceil(totalMinutes / 1440.0);
+            return dRate.multiply(BigDecimal.valueOf(Math.max(1, days))).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            long hours = (long) Math.ceil(totalMinutes / 60.0);
+            return hRate.multiply(BigDecimal.valueOf(Math.max(1, hours))).setScale(2, RoundingMode.HALF_UP);
+        }
+    }
+
+    @Override
+    public BigDecimal calculateAmount(LocalDateTime startTime, LocalDateTime endTime, BigDecimal hourlyRate) {
+        return calculateAmount(startTime, endTime, PricingType.HOURLY, hourlyRate, DEFAULT_DAILY_RATE);
     }
 
     @Override
@@ -249,7 +343,8 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingEstimateResponseDto estimateBooking(BookingEstimateRequestDto requestDto) {
         log.info("Estimating booking. lotId={}, spotId={}, startTime={}, endTime={}",
-                requestDto.getLotId(), requestDto.getSpotId(), requestDto.getStartTime(), requestDto.getEndTime());
+                requestDto.getLotId(), requestDto.getSpotId(),
+                requestDto.getStartTime(), requestDto.getEndTime());
 
         if (!requestDto.getEndTime().isAfter(requestDto.getStartTime())) {
             throw new IllegalStateException("End time must be after start time");
@@ -264,8 +359,10 @@ public class BookingServiceImpl implements BookingService {
                 ? BigDecimal.valueOf(spot.getPricePerHour())
                 : DEFAULT_HOURLY_RATE;
 
-        BigDecimal totalAmount = calculateAmount(requestDto.getStartTime(), requestDto.getEndTime(), hourlyRate);
-        long durationMinutes = Duration.between(requestDto.getStartTime(), requestDto.getEndTime()).toMinutes();
+        BigDecimal totalAmount = calculateAmount(
+                requestDto.getStartTime(), requestDto.getEndTime(), hourlyRate);
+        long durationMinutes = Duration.between(
+                requestDto.getStartTime(), requestDto.getEndTime()).toMinutes();
 
         BookingEstimateResponseDto response = BookingEstimateResponseDto.builder()
                 .lotId(requestDto.getLotId())
@@ -281,11 +378,32 @@ public class BookingServiceImpl implements BookingService {
         return response;
     }
 
+    @Override
+    public BigDecimal getBookingEstimate(Long bookingId) {
+        log.info("Calculating estimate for existing booking. bookingId={}", bookingId);
+
+        Booking booking = findBookingOrThrow(bookingId);
+        if (booking.getEndTime() == null) {
+            throw new IllegalStateException("End time is required for estimate");
+        }
+
+        ParkingSpotLookupResponseDto spot = fetchSpotOrThrow(booking.getSpotId());
+
+        BigDecimal hourlyRate = spot.getPricePerHour() != null
+                ? BigDecimal.valueOf(spot.getPricePerHour())
+                : DEFAULT_HOURLY_RATE;
+
+        BigDecimal estimate = calculateAmount(booking.getStartTime(), booking.getEndTime(), hourlyRate);
+        log.info("Estimate calculated for bookingId={}, estimate={}", bookingId, estimate);
+        return estimate;
+    }
+
+    // ── private helpers ──────────────────────────────────────────────────────
+
     private Booking findBookingOrThrow(Long bookingId) {
         return bookingRepository.findByBookingId(bookingId)
                 .orElseThrow(() -> new BookingNotFoundException(
-                        "Booking not found with id: " + bookingId
-                ));
+                        "Booking not found with id: " + bookingId));
     }
 
     private ParkingSpotLookupResponseDto fetchSpotOrThrow(Long spotId) {
@@ -293,7 +411,8 @@ public class BookingServiceImpl implements BookingService {
             return parkingSpotServiceClient.getSpotById(spotId);
         } catch (FeignException exception) {
             if (exception.status() == 404) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Parking spot not found with id: " + spotId);
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Parking spot not found with id: " + spotId);
             }
             throwMappedSpotServiceException(exception,
                     "Unable to validate parking spot with parkingspot-service");
@@ -344,7 +463,7 @@ public class BookingServiceImpl implements BookingService {
                         "Parking spot not found with id: " + spotId);
             }
             if (exception.status() == 409) {
-                return;
+                return; // already released, treat as success
             }
             throwMappedSpotServiceException(exception,
                     "Unable to release spot in parkingspot-service");
@@ -388,21 +507,17 @@ public class BookingServiceImpl implements BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     badGatewayMessage + " (parkingspot-service unreachable)");
         }
-
-        if (status != null && status.is4xxClientError()) {
+        if (status.is4xxClientError()) {
             throw new ResponseStatusException(status, "parkingspot-service rejected the request");
         }
-
         if (status == HttpStatus.SERVICE_UNAVAILABLE) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "parkingspot-service is unavailable");
         }
-
         if (status.is5xxServerError()) {
             throw new ResponseStatusException(status,
                     "parkingspot-service failed to process the request");
         }
-
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, badGatewayMessage);
     }
 
@@ -413,21 +528,17 @@ public class BookingServiceImpl implements BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     badGatewayMessage + " (parkinglot-service unreachable)");
         }
-
         if (status.is4xxClientError()) {
             throw new ResponseStatusException(status, "parkinglot-service rejected the request");
         }
-
         if (status == HttpStatus.SERVICE_UNAVAILABLE) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "parkinglot-service is unavailable");
         }
-
         if (status.is5xxServerError()) {
             throw new ResponseStatusException(status,
                     "parkinglot-service failed to process the request");
         }
-
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, badGatewayMessage);
     }
 }

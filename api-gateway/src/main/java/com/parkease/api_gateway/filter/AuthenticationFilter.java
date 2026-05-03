@@ -52,7 +52,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         String token = authHeader.substring(7);
-        log.info("Token : " +token);
+        log.info("Token : " + token);
         log.debug("Authorization token received (length={})", token != null ? token.length() : 0);
         try {
             if (!jwtUtil.isTokenValid(token)) {
@@ -60,7 +60,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
             }
 
             String username = jwtUtil.extractUsername(token);
-            Integer userId = jwtUtil.extractUserId(token);
+            Long userId = jwtUtil.extractUserId(token);
             List<String> roles = jwtUtil.extractRoles(token);
 
             if (roles == null || roles.isEmpty()) {

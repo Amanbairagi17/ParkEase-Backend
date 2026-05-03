@@ -23,14 +23,18 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByTransactionId(String transactionId);
 
+    Optional<Payment> findByRazorpayOrderId(String razorpayOrderId);
+
     List<Payment> findByPaidAtBetween(LocalDateTime from, LocalDateTime to);
 
-    @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.bookingId IN :bookingIds AND p.status = 'PAID'")
+    @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.bookingId IN :bookingIds AND p.status = 'SUCCESS'")
     BigDecimal sumAmountByBookingIds(@Param("bookingIds") List<Long> bookingIds);
 
     long countByUserId(Long userId);
 
-    Long findUserIdByPaymentId(Long paymentId);
+    @Query("SELECT p.userId FROM Payment p WHERE p.id = :paymentId")
+    Long findUserIdByPaymentId(@Param("paymentId") Long paymentId);
 
-    Long findUserIdByBookingId(Long bookingId);
+    @Query("SELECT p.userId FROM Payment p WHERE p.bookingId = :bookingId")
+    Long findUserIdByBookingId(@Param("bookingId") Long bookingId);
 }

@@ -1,6 +1,7 @@
 package com.parkease.booking_service.dtos;
 
 import com.parkease.booking_service.entity.BookingType;
+import com.parkease.booking_service.entity.PricingType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -32,8 +33,14 @@ public class BookingRequestDto {
     @NotNull(message = "Booking type is required")
     private BookingType bookingType;
 
+    @NotNull(message = "Pricing type is required")
+    private PricingType pricingType;
+
     @NotNull(message = "Start time is required")
     private LocalDateTime startTime;
+
+    @NotNull(message = "End time is required")
+    private LocalDateTime endTime;
 
     private String email;
 }

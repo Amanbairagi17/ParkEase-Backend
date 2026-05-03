@@ -14,6 +14,9 @@ public class PaymentResponseDto {
     private String status;
     private String mode;
     private String transactionId;
+    private String razorpayOrderId;
+    private String razorpayPaymentId;
+    private String razorpaySignature;
     private String currency;
     private LocalDateTime paidAt;
     private LocalDateTime refundedAt;

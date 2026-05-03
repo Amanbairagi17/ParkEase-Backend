@@ -16,10 +16,6 @@ public class PaymentRequestDto {
     @NotNull(message = "userId is required")
     private Long userId;
 
-    @NotNull(message = "amount is required")
-    @Positive(message = "amount must be positive")
-    private BigDecimal amount;
-
     @NotNull(message = "payment mode is required")
     private PaymentMode mode;
 

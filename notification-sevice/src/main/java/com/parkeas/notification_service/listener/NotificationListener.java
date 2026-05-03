@@ -17,36 +17,35 @@ public class NotificationListener {
 
     @RabbitListener(queues = RabbitMQConfig.BOOKING_QUEUE)
     public void handleBooking(NotificationRequestDto request) {
-        log.info("Received BOOKING notification event for recipientId={}",
-                request.getRecipientId());
-        notificationService.send(request);
+        process(request, "BOOKING");
     }
 
     @RabbitListener(queues = RabbitMQConfig.PAYMENT_QUEUE)
     public void handlePayment(NotificationRequestDto request) {
-        log.info("Received PAYMENT notification event for recipientId={}",
-                request.getRecipientId());
-        notificationService.send(request);
+        process(request, "PAYMENT");
     }
 
     @RabbitListener(queues = RabbitMQConfig.CHECKIN_QUEUE)
     public void handleCheckin(NotificationRequestDto request) {
-        log.info("Received CHECKIN notification event for recipientId={}",
-                request.getRecipientId());
-        notificationService.send(request);
+        process(request, "CHECKIN");
     }
 
     @RabbitListener(queues = RabbitMQConfig.CHECKOUT_QUEUE)
     public void handleCheckout(NotificationRequestDto request) {
-        log.info("Received CHECKOUT notification event for recipientId={}",
-                request.getRecipientId());
-        notificationService.send(request);
+        process(request, "CHECKOUT");
     }
 
     @RabbitListener(queues = RabbitMQConfig.EXPIRY_QUEUE)
     public void handleExpiry(NotificationRequestDto request) {
-        log.info("Received EXPIRY notification event for recipientId={}",
-                request.getRecipientId());
-        notificationService.send(request);
+        process(request, "EXPIRY");
+    }
+
+    private void process(NotificationRequestDto request, String type) {
+        log.info("Received {} notification event for recipientId={}", type, request.getRecipientId());
+        try {
+            notificationService.send(request);
+        } catch (Exception e) {
+            log.error("Failed to process {} notification for recipientId={} : {}", type, request.getRecipientId(), e.getMessage());
+        }
     }
 }

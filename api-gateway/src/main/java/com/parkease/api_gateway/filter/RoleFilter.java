@@ -49,6 +49,8 @@ public class RoleFilter extends AbstractGatewayFilterFactory<RoleFilter.Config> 
             String token = authHeader.substring(7);
 
             try {
+                Claims claims = jwtUtil.extractAllClaims(token);
+                Long userId = jwtUtil.extractUserId(token);
                 List<String> userRoles = jwtUtil.extractRoles(token);
 
                 if (userRoles == null || userRoles.isEmpty()) {
@@ -61,6 +63,14 @@ public class RoleFilter extends AbstractGatewayFilterFactory<RoleFilter.Config> 
                 if (!allowed) {
                     return onError(exchange, "Forbidden", HttpStatus.FORBIDDEN);
                 }
+
+                // ✅ Inject headers for downstream services
+                exchange = exchange.mutate()
+                        .request(r -> r
+                                .header("X-User-Id", String.valueOf(userId))
+                                .header("X-User-Roles", String.join(",", userRoles))
+                        )
+                        .build();
 
                 return chain.filter(exchange);
 

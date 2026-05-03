@@ -12,13 +12,13 @@ public class ParkingLotSecurity {
         this.parkingLotRepository = parkingLotRepository;
     }
 
-    public boolean isOwner(Integer lotId) {
+    public boolean isOwner(Long lotId) {
 
         // current logged-in user
         Long currentUserId = SecurityUtils.getCurrentUserId();
 
         // lot owner (managerId)
-        Integer managerId = parkingLotRepository.findManagerIdByLotId(lotId);
+        Long managerId = parkingLotRepository.findManagerIdByLotId(lotId);
 
         if (managerId == null) {
             return false;

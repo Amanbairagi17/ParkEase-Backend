@@ -108,16 +108,16 @@ public class ParkingLotServiceImpl implements ParkingLotService {
         existingLot.setCloseTime(requestDto.getCloseTime());
         existingLot.setImageUrl(requestDto.getImageUrl());
 
-        Integer previousTotalSpots = existingLot.getTotalSpots();
-        Integer previousAvailableSpots = existingLot.getAvailableSpots();
-        Integer requestedTotalSpots = requestDto.getTotalSpots();
+        Long previousTotalSpots = existingLot.getTotalSpots();
+        Long previousAvailableSpots = existingLot.getAvailableSpots();
+        Long requestedTotalSpots = requestDto.getTotalSpots();
 
         if (requestedTotalSpots < (previousTotalSpots - previousAvailableSpots)) {
             throw new IllegalStateException("Total spots cannot be less than occupied spots");
         }
 
         existingLot.setTotalSpots(requestedTotalSpots);
-        int delta = requestedTotalSpots - previousTotalSpots;
+        Long delta = requestedTotalSpots - previousTotalSpots;
         existingLot.setAvailableSpots(previousAvailableSpots + delta);
 
         return responseMapper.mapTo(parkingLotRepository.save(existingLot));

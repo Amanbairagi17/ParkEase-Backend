@@ -54,7 +54,7 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
+@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<BookingResponseDto>> getBookingsByUser(@PathVariable Long userId) {
         log.info("Fetching bookings for user. userId={}", userId);
@@ -148,7 +148,7 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.id")
+@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
     @GetMapping("/history/{userId}")
     public ResponseEntity<List<BookingResponseDto>> getBookingHistory(@PathVariable Long userId) {
         log.info("Fetching booking history for userId={}", userId);
@@ -159,7 +159,7 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+@PreAuthorize("isAuthenticated()")
     @PostMapping("/estimate")
     public ResponseEntity<BookingEstimateResponseDto> estimateBooking(@Valid @RequestBody BookingEstimateRequestDto requestDto) {
         log.info("Estimate request. lotId={}, spotId={}, startTime={}, endTime={}",
@@ -170,4 +170,16 @@ public class BookingController {
         log.info("Estimate response. totalAmount={}", response.getTotalAmount());
         return ResponseEntity.ok(response);
     }
+
+    @PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#bookingId)")
+    @GetMapping("/{bookingId}/estimate")
+    public ResponseEntity<BigDecimal> getBookingEstimate(@PathVariable Long bookingId) {
+        log.info("Getting estimate for booking. bookingId={}", bookingId);
+
+        BigDecimal estimate = bookingService.getBookingEstimate(bookingId);
+
+        log.info("Booking estimate calculated. bookingId={}, estimate={}", bookingId, estimate);
+        return ResponseEntity.ok(estimate);
+    }
 }
+

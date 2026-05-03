@@ -33,7 +33,7 @@ public class ParkingLotRequestDto {
 
     @NotNull(message = "Total spots is required")
     @Positive(message = "Total spots must be greater than 0")
-    private Integer totalSpots;
+    private Long totalSpots;
 
     @NotNull(message = "Manager id is required")
     @Positive(message = "Manager id must be greater than 0")

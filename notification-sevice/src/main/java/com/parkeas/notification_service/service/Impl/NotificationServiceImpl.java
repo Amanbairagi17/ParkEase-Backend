@@ -13,18 +13,13 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -32,9 +27,9 @@ import java.util.Map;
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final NotificationRequestMapper requestMapper;   // RequestDto ↔ Entity
-    private final NotificationResponseMapper responseMapper; // ResponseDto ↔ Entity
-    private final RestTemplate restTemplate;          // ← REPLACE JavaMailSender
+    private final NotificationRequestMapper requestMapper;
+    private final NotificationResponseMapper responseMapper;
+    private final RestTemplate restTemplate;
 
     @Value("${brevo.api-key}")
     private String apiKey;
@@ -44,160 +39,169 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Value("${brevo.sender.name}")
     private String senderName;
-    private HttpHeaders headers;
 
-    /**
-     * Trim all @Value-injected Brevo config strings.
-     * Environment variables (from .env files, Docker secrets, or OS env)
-     * frequently carry trailing newlines/spaces that @Value does NOT strip.
-     * A dirty api-key header value causes intermittent 401 Unauthorized from Brevo.
-     */
     @PostConstruct
     private void sanitizeBrevoConfig() {
-        if (apiKey != null)      apiKey      = apiKey.trim();
+        if (apiKey != null) apiKey = apiKey.trim();
         if (senderEmail != null) senderEmail = senderEmail.trim();
-        if (senderName  != null) senderName  = senderName.trim();
-        log.info("[Brevo] Config sanitized. senderEmail='{}', senderName='{}', apiKey starts with '{}'",
-                senderEmail, senderName,
-                (apiKey != null && apiKey.length() > 10) ? apiKey.substring(0, 10) + "..." : apiKey);
+        if (senderName != null) senderName = senderName.trim();
+        log.info("Brevo config sanitized. senderEmail={}", senderEmail);
     }
 
     @Override
     public void send(NotificationRequestDto request) {
-
-        // 1. Save to DB
-        Notification notification = requestMapper.mapFrom(request);
-        notification.setIsRead(false);
-        notification.setSentAt(LocalDateTime.now());
-        notificationRepository.save(notification);
-        log.info("Notification saved. recipientId={}, type={}",
+        log.info("Processing notification for recipientId={}, type={}",
                 request.getRecipientId(), request.getType());
 
-        // 2. Send Email if channel is EMAIL
-        if (request.getChannel() == NotificationChannel.EMAIL
-                && request.getRecipientEmail() != null) {
-            sendEmail(
-                    request.getRecipientEmail(),
-                    request.getTitle(),
-                    request.getMessage()
-            );
+        try {
+            Notification notification = requestMapper.mapFrom(request);
+            notification.setIsRead(false);
+            notification.setSentAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+
+            log.info("Notification saved successfully for recipientId={}",
+                    request.getRecipientId());
+
+        } catch (Exception e) {
+            log.error("Error saving notification for recipientId={} : {}",
+                    request.getRecipientId(), e.getMessage(), e);
         }
 
-        // 3. SMS — add Twilio later
+        if (request.getChannel() == NotificationChannel.EMAIL
+                && request.getRecipientEmail() != null) {
+
+            try {
+                sendEmail(
+                        request.getRecipientEmail(),
+                        request.getTitle(),
+                        request.getMessage()
+                );
+            } catch (Exception e) {
+                log.error("Email sending failed for recipientId={} : {}",
+                        request.getRecipientId(), e.getMessage(), e);
+            }
+        }
+
         if (request.getChannel() == NotificationChannel.SMS) {
-            log.info("SMS not yet implemented for recipientId={}", request.getRecipientId());
+            log.info("SMS not implemented for recipientId={}",
+                    request.getRecipientId());
+        }
+    }
+
+    @Override
+    public void sendEmail(String to, String subject, String body) {
+        log.info("Sending email to {}", to);
+
+        String url = "https://api.brevo.com/v3/smtp/email";
+
+        try {
+            if (to == null || !to.contains("@")) {
+                log.error("Invalid email address: {}", to);
+                return;
+            }
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("sender", Map.of(
+                    "email", senderEmail,
+                    "name", senderName != null ? senderName : "ParkEase"
+            ));
+            requestBody.put("to", List.of(Map.of("email", to)));
+            requestBody.put("subject", subject);
+            requestBody.put("htmlContent", "<p>" + body + "</p>");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", apiKey);
+
+            HttpEntity<Map<String, Object>> entity =
+                    new HttpEntity<>(requestBody, headers);
+
+            ResponseEntity<String> response =
+                    restTemplate.postForEntity(url, entity, String.class);
+
+            log.info("Email sent successfully to {} with status={}",
+                    to, response.getStatusCode());
+
+        } catch (HttpClientErrorException e) {
+            log.error("Brevo API error for {} : {}", to, e.getResponseBodyAsString());
+        } catch (Exception e) {
+            log.error("Unexpected email error for {} : {}", to, e.getMessage(), e);
         }
     }
 
     @Override
     public void sendBulk(List<Long> recipientIds, String title, String message) {
-        recipientIds.forEach(recipientId -> {
-            NotificationRequestDto request = new NotificationRequestDto();
-            request.setRecipientId(recipientId);
-            request.setTitle(title);
-            request.setMessage(message);
-            request.setChannel(NotificationChannel.APP);
-            send(request);
+        log.info("Sending bulk notifications to {} users", recipientIds.size());
+
+        recipientIds.forEach(id -> {
+            NotificationRequestDto req = new NotificationRequestDto();
+            req.setRecipientId(id);
+            req.setTitle(title);
+            req.setMessage(message);
+            req.setChannel(NotificationChannel.APP);
+            send(req);
         });
-        log.info("Bulk notification sent to {} recipients", recipientIds.size());
+
+        log.info("Bulk notifications sent successfully");
     }
 
     @Override
     public void markAsRead(Long notificationId) {
+        log.info("Marking notification as read. id={}", notificationId);
+
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Notification not found: " + notificationId));
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+
         notification.setIsRead(true);
         notificationRepository.save(notification);
+
+        log.info("Notification marked as read. id={}", notificationId);
     }
 
     @Override
     public void markAllRead(Long recipientId) {
-        List<Notification> unread = notificationRepository
-                .findByRecipientIdAndIsRead(recipientId, false);
+        log.info("Marking all notifications as read for recipientId={}", recipientId);
+
+        List<Notification> unread =
+                notificationRepository.findByRecipientIdAndIsRead(recipientId, false);
+
         unread.forEach(n -> n.setIsRead(true));
         notificationRepository.saveAll(unread);
-        log.info("Marked all as read for recipientId={}", recipientId);
+
+        log.info("All notifications marked as read for recipientId={}", recipientId);
     }
 
     @Override
     public List<NotificationResponseDto> getByRecipient(Long recipientId) {
-        return notificationRepository.findByRecipientId(recipientId)
-                .stream()
-                .map(responseMapper::mapTo)  // ResponseMapper: Entity → Dto
-                .toList();
+        log.info("Fetching notifications for recipientId={}", recipientId);
+
+        List<NotificationResponseDto> result =
+                notificationRepository.findByRecipientId(recipientId)
+                        .stream()
+                        .map(responseMapper::mapTo)
+                        .toList();
+
+        log.info("Fetched {} notifications for recipientId={}", result.size(), recipientId);
+        return result;
     }
 
     @Override
     public int getUnreadCount(Long recipientId) {
-        return notificationRepository
+        log.info("Fetching unread count for recipientId={}", recipientId);
+
+        int count = notificationRepository
                 .countByRecipientIdAndIsRead(recipientId, false);
+
+        log.info("Unread count for recipientId={} is {}", recipientId, count);
+        return count;
     }
 
     @Override
     public void deleteNotification(Long notificationId) {
+        log.info("Deleting notification id={}", notificationId);
+
         notificationRepository.deleteByNotificationId(notificationId);
-        log.info("Notification deleted. id={}", notificationId);
-    }
 
-    @Override
-    public void sendEmail(String to, String subject, String body) {
-        String url = "https://api.brevo.com/v3/smtp/email";
-
-        // ── 1. Sanitize inputs ────────────────────────────────────────────────
-        String recipientEmail = (to      != null) ? to.trim()      : null;
-        String emailSubject   = (subject != null) ? subject.trim() : "(no subject)";
-        String emailBody      = (body    != null) ? body.trim()    : "";
-
-        // ── 2. Pre-call validation ────────────────────────────────────────────
-        if (recipientEmail == null || recipientEmail.isEmpty()) {
-            log.error("[Brevo] Skipping email — recipient address is null or empty. subject='{}'", emailSubject);
-            return;
-        }
-        if (!recipientEmail.contains("@")) {
-            log.error("[Brevo] Skipping email — invalid recipient address '{}'. subject='{}'", recipientEmail, emailSubject);
-            return;
-        }
-        if (apiKey == null || apiKey.isEmpty()) {
-            log.error("[Brevo] Skipping email — api-key is null or empty.");
-            return;
-        }
-        if (senderEmail == null || senderEmail.isEmpty()) {
-            log.error("[Brevo] Skipping email — sender email is null or empty.");
-            return;
-        }
-
-        //3. Build request payload
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("sender", Map.of(
-                "email", senderEmail,
-                "name",  (senderName != null ? senderName : "ParkEase")
-        ));
-        requestBody.put("to", List.of(Map.of("email", recipientEmail)));
-        requestBody.put("subject", emailSubject);
-        requestBody.put("htmlContent", "<p>" + emailBody + "</p>");
-
-        // 4. Build headers 
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("api-key", apiKey);   // apiKey already trimmed in @PostConstruct
-
-        // 5. Debug log before the call 
-        log.info("[Brevo] Sending email → to='{}', subject='{}', sender='{}', apiKey='{}''",
-                recipientEmail, emailSubject, senderEmail,
-                apiKey.length() > 10 ? apiKey.substring(0, 10) + "..." : "<short-key>");
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-        // 6. Call Brevo API 
-        try {
-            ResponseEntity<String> response =
-                    restTemplate.postForEntity(url, entity, String.class);
-            log.info("[Brevo] Email sent successfully → to='{}', status={}", recipientEmail, response.getStatusCode());
-        } catch (HttpClientErrorException e) {
-            // Log full Brevo error body (contains exact error code & message)
-            log.error("[Brevo] HTTP {} sending email to '{}'. Brevo response: {}",
-                    e.getStatusCode(), recipientEmail, e.getResponseBodyAsString());
-        } catch (Exception e) {
-            log.error("[Brevo] Unexpected error sending email to '{}': {}", recipientEmail, e.getMessage(), e);
-        }
+        log.info("Notification deleted id={}", notificationId);
     }
 }

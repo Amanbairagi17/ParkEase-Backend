@@ -31,3 +31,7 @@ eureka:
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}
+
+razorpay:
+  key: ${RAZORPAY_KEY:rzp_test_placeholder}
+  secret: ${RAZORPAY_SECRET:secret_placeholder}
