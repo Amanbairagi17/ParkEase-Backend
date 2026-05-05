@@ -47,6 +47,12 @@ public class VehicleController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    @PreAuthorize("hasRole('DRIVER') or #ownerId == authentication.principal")
+    @GetMapping("/user/{ownerId}")
+    public ResponseEntity<List<VehicleResponseDto>> getVehiclesByUser(@PathVariable Long ownerId){
+        return ResponseEntity.status(HttpStatus.OK).body(vehicleService.getVehiclesByOwner(ownerId));
+    }
+
     @PreAuthorize("hasAnyRole('DRIVER','ADMIN')")
     @GetMapping("/getByLicensePlate/{licensePlate}")
     public ResponseEntity<VehicleResponseDto> getByLicensePlate(@PathVariable String licensePlate){

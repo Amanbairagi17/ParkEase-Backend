@@ -76,6 +76,17 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAnyRole('DRIVER','MANAGER','ADMIN')")
+    @GetMapping("/lot/{lotId}/active")
+    public ResponseEntity<List<BookingResponseDto>> getActiveBookingsByLot(@PathVariable Long lotId) {
+        log.info("Fetching active bookings for lot. lotId={}", lotId);
+
+        List<BookingResponseDto> response = bookingService.getActiveBookingsByLot(lotId);
+
+        log.info("Returning {} active bookings for lotId={}", response.size(), lotId);
+        return ResponseEntity.ok(response);
+    }
+
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
     @GetMapping("/active")
     public ResponseEntity<List<BookingResponseDto>> getActiveBookings() {

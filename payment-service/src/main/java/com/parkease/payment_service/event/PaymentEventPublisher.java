@@ -19,7 +19,7 @@ public class PaymentEventPublisher {
     public void publishPaymentSuccess(Long bookingId) {
         PaymentSuccessEventDto event = PaymentSuccessEventDto.builder()
                 .bookingId(bookingId)
-                .status("PAID")
+                .status("SUCCESS")
                 .build();
 
         try {

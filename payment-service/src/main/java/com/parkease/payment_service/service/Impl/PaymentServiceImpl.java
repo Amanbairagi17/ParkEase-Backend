@@ -7,6 +7,7 @@ import com.parkease.payment_service.dtos.PaymentResponseDto;
 import com.parkease.payment_service.dtos.PaymentVerificationDto;
 import com.parkease.payment_service.dtos.RazorpayOrderDto;
 import com.parkease.payment_service.entity.Payment;
+import com.parkease.payment_service.entity.PaymentMode;
 import com.parkease.payment_service.entity.PaymentStatus;
 import com.parkease.payment_service.exception.PaymentNotFoundException;
 import com.parkease.payment_service.mapper.Impl.PaymentRequestMapper;
@@ -98,14 +99,22 @@ public class PaymentServiceImpl implements PaymentService {
 
             Order order = client.orders.create(orderRequest);
 
-            // 3. Save pending payment record
-            Payment payment = requestMapper.mapFrom(requestDto);
+            // 3. Save or refresh a pending payment record for this booking
+            Payment payment = paymentRepository.findFirstByBookingIdOrderByPaymentIdDesc(requestDto.getBookingId())
+                    .filter(existing -> existing.getStatus() == PaymentStatus.PENDING)
+                    .orElseGet(() -> requestMapper.mapFrom(requestDto));
+            payment.setUserId(booking.getUserId()); // Deriving from trusted source
+            payment.setBookingId(booking.getBookingId());
             payment.setAmount(amount); // Use DB amount
+            payment.setMode(PaymentMode.UPI);
             payment.setRazorpayOrderId(order.get("id"));
             payment.setStatus(PaymentStatus.PENDING);
             payment.setCurrency("INR");
             payment.setTransactionId(null);
 
+            log.info("Saving pending payment for bookingId={}, userId={}, amount={}", 
+                payment.getBookingId(), payment.getUserId(), payment.getAmount());
+                
             paymentRepository.save(payment);
 
             return RazorpayOrderDto.builder()
@@ -179,7 +188,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponseDto getByBookingId(Long bookingId) {
-        Payment payment = paymentRepository.findByBookingId(bookingId)
+        Payment payment = paymentRepository.findFirstByBookingIdOrderByPaymentIdDesc(bookingId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found"));
         return responseMapper.mapTo(payment);
     }
@@ -226,9 +235,12 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public void updateStatus(Long paymentId, String status) {
+
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new PaymentNotFoundException("Payment not found"));
-        payment.setStatus(PaymentStatus.valueOf(status));
+
+        payment.setStatus(PaymentStatus.fromValue(status));
+
         paymentRepository.save(payment);
     }
 
@@ -260,7 +272,21 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public PaymentResponseDto processPayment(PaymentRequestDto requestDto) {
 
+        BookingDto booking = bookingClient.getBooking(requestDto.getBookingId());
+        if (booking == null) {
+            throw new RuntimeException("Booking not found");
+        }
+
+        BigDecimal amount = booking.getTotalAmount();
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException("Invalid booking amount: " + amount);
+        }
+
         Payment payment = requestMapper.mapFrom(requestDto);
+        payment.setBookingId(booking.getBookingId());
+        payment.setUserId(booking.getUserId());
+        payment.setAmount(amount);
+        payment.setMode(requestDto.getMode() != null ? requestDto.getMode() : PaymentMode.UPI);
 
         payment.setCurrency(
                 requestDto.getCurrency() != null ? requestDto.getCurrency() : "INR"

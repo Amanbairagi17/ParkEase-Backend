@@ -89,6 +89,7 @@ spring:
             - name: RoleFilter
               args:
                 roles:
+                  - PUBLIC
                   - DRIVER
                   - MANAGER
                   - ADMIN

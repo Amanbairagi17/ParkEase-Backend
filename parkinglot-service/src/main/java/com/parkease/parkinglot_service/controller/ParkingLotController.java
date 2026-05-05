@@ -34,8 +34,20 @@ public class ParkingLotController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // Public / Authenticated
-    @PreAuthorize("isAuthenticated()")
+    // Public list/search
+    @PreAuthorize("permitAll()")
+    @GetMapping
+    public ResponseEntity<List<ParkingLotResponseDto>> getLots(@RequestParam(required = false) String search) {
+        String keyword = search == null ? "" : search;
+        log.info("Fetching parking lots. search={}", keyword);
+
+        List<ParkingLotResponseDto> response = parkingLotService.searchLots(keyword);
+
+        log.info("Parking lots returned={}", response.size());
+        return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("permitAll()")
     @GetMapping("/{lotId}")
     public ResponseEntity<ParkingLotResponseDto> getLotById(@PathVariable Long lotId) {
         log.info("Fetching parking lot by id. lotId={}", lotId);
@@ -47,7 +59,7 @@ public class ParkingLotController {
     }
 
     //  Public browsing
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("permitAll()")
     @GetMapping("/city/{city}")
     public ResponseEntity<List<ParkingLotResponseDto>> getLotsByCity(@PathVariable String city) {
         log.info("Fetching parking lots by city. city={}", city);
@@ -58,7 +70,7 @@ public class ParkingLotController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("permitAll()")
     @GetMapping("/nearby")
     public ResponseEntity<List<ParkingLotResponseDto>> getNearbyLots(@RequestParam double latitude,
                                                                      @RequestParam double longitude,
@@ -151,7 +163,7 @@ public class ParkingLotController {
     }
 
     // Public search
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("permitAll()")
     @GetMapping("/search")
     public ResponseEntity<List<ParkingLotResponseDto>> searchLots(@RequestParam String keyword) {
 

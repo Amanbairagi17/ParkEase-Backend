@@ -13,6 +13,7 @@ public class RouteValidator {
             "/api/auth/verify",
             "/api/auth/sendotp",
             "/api/auth/forget",
+            "/api/parking-lots",
             "/api/v1/workspaces/public",
             "/api/v1/boards/get/workspace",
             "/api/v1/lists/public",

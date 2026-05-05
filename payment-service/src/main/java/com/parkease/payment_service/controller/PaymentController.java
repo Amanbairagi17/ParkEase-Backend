@@ -28,7 +28,7 @@ public class PaymentController {
     @PreAuthorize("hasAnyRole('DRIVER','ADMIN')")
     @PostMapping("/create-order")
     public ResponseEntity<RazorpayOrderDto> createOrder(@RequestBody PaymentRequestDto requestDto) {
-        log.info("Create order request. bookingId={}, userId={}", requestDto.getBookingId(), requestDto.getUserId());
+        log.info("Create order request. bookingId={}, ", requestDto.getBookingId());
         return ResponseEntity.ok(paymentService.createRazorpayOrder(requestDto));
     }
 

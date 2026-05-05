@@ -13,9 +13,6 @@ public class PaymentRequestDto {
     @NotNull(message = "bookingId is required")
     private Long bookingId;
 
-    @NotNull(message = "userId is required")
-    private Long userId;
-
     @NotNull(message = "payment mode is required")
     private PaymentMode mode;
 

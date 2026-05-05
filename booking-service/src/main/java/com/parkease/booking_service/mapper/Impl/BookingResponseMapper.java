@@ -15,7 +15,9 @@ public class BookingResponseMapper implements Mapper<BookingResponseDto, Booking
 
     @Override
     public BookingResponseDto mapTo(Booking booking) {
-        return modelMapper.map(booking, BookingResponseDto.class);
+        BookingResponseDto response = modelMapper.map(booking, BookingResponseDto.class);
+        response.setAmount(booking.getTotalAmount());
+        return response;
     }
 
     @Override

@@ -25,6 +25,7 @@ public class BookingResponseDto {
     private String duration;
     private boolean isPaid;
     private BigDecimal totalAmount;
+    private BigDecimal amount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

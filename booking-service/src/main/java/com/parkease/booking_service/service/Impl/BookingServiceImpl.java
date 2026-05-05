@@ -151,6 +151,15 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    public List<BookingResponseDto> getActiveBookingsByLot(Long lotId) {
+        List<BookingStatus> status = List.of(BookingStatus.RESERVED, BookingStatus.ACTIVE);
+        return bookingRepository.findByLotIdAndStatusIn(lotId, status)
+                .stream()
+                .map(bookingResponseMapper::mapTo)
+                .toList();
+    }
+
+    @Override
     public List<BookingResponseDto> getActiveBookings() {
         return bookingRepository.findByStatus(BookingStatus.ACTIVE)
                 .stream()
@@ -250,13 +259,20 @@ public class BookingServiceImpl implements BookingService {
 
         return bookingResponseMapper.mapTo(updated);
     }
-
+    
     @Override
     @Transactional
     public BookingResponseDto markAsPaid(Long bookingId) {
         log.info("Marking booking as paid. bookingId={}", bookingId);
+
         Booking booking = findBookingOrThrow(bookingId);
+
         booking.setPaid(true);
+
+        // Payment confirms the reservation; checkout is responsible for COMPLETED.
+        if (booking.getStatus() != BookingStatus.ACTIVE) {
+            booking.setStatus(BookingStatus.RESERVED);
+        }
 
         if (booking.getDuration() == null && booking.getStartTime() != null && booking.getEndTime() != null) {
             long minutes = Duration.between(booking.getStartTime(), booking.getEndTime()).toMinutes();
@@ -264,6 +280,10 @@ public class BookingServiceImpl implements BookingService {
         }
 
         Booking saved = bookingRepository.save(booking);
+
+        log.info("Booking updated after payment. status={}, paid={}",
+                saved.getStatus(), saved.isPaid());
+
         return bookingResponseMapper.mapTo(saved);
     }
 
@@ -322,8 +342,9 @@ public class BookingServiceImpl implements BookingService {
             long days = (long) Math.ceil(totalMinutes / 1440.0);
             return dRate.multiply(BigDecimal.valueOf(Math.max(1, days))).setScale(2, RoundingMode.HALF_UP);
         } else {
-            long hours = (long) Math.ceil(totalMinutes / 60.0);
-            return hRate.multiply(BigDecimal.valueOf(Math.max(1, hours))).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal hours = BigDecimal.valueOf(totalMinutes)
+                    .divide(BigDecimal.valueOf(60), 4, RoundingMode.HALF_UP);
+            return hRate.multiply(hours).setScale(2, RoundingMode.HALF_UP);
         }
     }
 

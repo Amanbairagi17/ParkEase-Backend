@@ -17,6 +17,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByBookingId(Long bookingId);
 
+    Optional<Payment> findFirstByBookingIdOrderByPaymentIdDesc(Long bookingId);
+
     List<Payment> findByUserId(Long userId);
 
     List<Payment> findByStatus(PaymentStatus status);
@@ -27,14 +29,21 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findByPaidAtBetween(LocalDateTime from, LocalDateTime to);
 
-    @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.bookingId IN :bookingIds AND p.status = 'SUCCESS'")
+    @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.bookingId IN :bookingIds AND p.status = com.parkease.payment_service.entity.PaymentStatus.SUCCESS")
     BigDecimal sumAmountByBookingIds(@Param("bookingIds") List<Long> bookingIds);
 
     long countByUserId(Long userId);
 
-    @Query("SELECT p.userId FROM Payment p WHERE p.id = :paymentId")
+    @Query("SELECT p.userId FROM Payment p WHERE p.paymentId = :paymentId")
     Long findUserIdByPaymentId(@Param("paymentId") Long paymentId);
 
-    @Query("SELECT p.userId FROM Payment p WHERE p.bookingId = :bookingId")
+    @Query("""
+            SELECT p.userId FROM Payment p
+            WHERE p.bookingId = :bookingId
+              AND p.paymentId = (
+                  SELECT MAX(p2.paymentId) FROM Payment p2
+                  WHERE p2.bookingId = :bookingId
+              )
+            """)
     Long findUserIdByBookingId(@Param("bookingId") Long bookingId);
 }

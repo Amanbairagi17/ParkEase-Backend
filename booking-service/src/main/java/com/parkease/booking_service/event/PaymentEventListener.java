@@ -17,7 +17,12 @@ public class PaymentEventListener {
 
     @RabbitListener(queues = RabbitMQConfig.PAYMENT_QUEUE)
     public void handlePaymentSuccess(PaymentSuccessEventDto event) {
-        log.info("Received payment success event for bookingId={}", event.getBookingId());
+        log.info("Received payment event for bookingId={}, status={}", event.getBookingId(), event.getStatus());
+        if (!"SUCCESS".equalsIgnoreCase(event.getStatus())) {
+            log.warn("Ignoring non-success payment event for bookingId={}, status={}",
+                    event.getBookingId(), event.getStatus());
+            return;
+        }
         try {
             bookingService.markAsPaid(event.getBookingId());
         } catch (Exception e) {

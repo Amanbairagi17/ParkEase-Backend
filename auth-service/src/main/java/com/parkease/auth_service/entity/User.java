@@ -33,6 +33,7 @@ public class User {
     private Boolean isActive;
     private LocalDateTime createdAt;
     private String profilePicUrl;
+    private String profilePicPublicId;
 
     @Column(nullable = true)
     private String provider;

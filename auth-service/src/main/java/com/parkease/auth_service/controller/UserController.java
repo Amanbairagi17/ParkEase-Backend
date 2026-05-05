@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -32,12 +33,28 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @PutMapping("/{userId}/profile")
+    @PutMapping(value = "/{userId}/profile", consumes = "multipart/form-data")
     public ResponseEntity<AuthResponseDto> updateProfile(
             @PathVariable Long userId,
-            @Valid @RequestBody ProfileUpdateDto profileUpdateDto) {
-        log.info("Request received to update profile for userId={}", userId);
-        AuthResponseDto response = userService.updateProfile(userId, profileUpdateDto);
-        return ResponseEntity.ok(response);
+            @Valid @ModelAttribute ProfileUpdateDto dto
+    ) {
+        log.info("Updating profile for userId={}", userId);
+        return ResponseEntity.ok(userService.updateProfile(userId, dto));
+    }
+
+    @DeleteMapping("/{userId}/profile-image")
+    public ResponseEntity<String> deleteProfileImage(@PathVariable Long userId) {
+
+        userService.deleteProfileImage(userId);
+
+        return ResponseEntity.ok("Profile image deleted successfully");
+    }
+
+    @PatchMapping(value = "/{userId}/profile-picture", consumes = "multipart/form-data")
+    public ResponseEntity<AuthResponseDto> updateProfilePicture(
+            @PathVariable Long userId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(userService.updateProfilePicture(userId, file));
     }
 }

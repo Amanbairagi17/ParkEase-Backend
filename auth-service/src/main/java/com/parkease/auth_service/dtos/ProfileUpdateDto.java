@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 public class ProfileUpdateDto {
@@ -23,5 +24,5 @@ public class ProfileUpdateDto {
     private String phone;
 
     private String address;
-    private String profilePicUrl;
+    private MultipartFile profileImageFile;
 }

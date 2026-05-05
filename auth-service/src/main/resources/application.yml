@@ -2,6 +2,11 @@ spring:
   application:
     name: auth-service
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
   datasource:
     url: ${DATABASE}
     username: ${USERNAME}
@@ -38,6 +43,11 @@ brevo:
     email: ${BREVO_SENDER_MAIL}
     name: ParkEase
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
 domain:
   url: http://localhost:8081/api
 
@@ -47,6 +57,7 @@ oauth2:
 server:
   port: 8081
   forward-headers-strategy: framework
+
 
 eureka:
   client:

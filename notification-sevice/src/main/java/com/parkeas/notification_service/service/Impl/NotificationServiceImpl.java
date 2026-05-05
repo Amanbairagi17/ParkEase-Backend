@@ -12,6 +12,8 @@ import com.parkeas.notification_service.service.NotificationService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -145,41 +147,37 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("Bulk notifications sent successfully");
     }
 
-    @Override
+@Override
+    @Transactional
     public void markAsRead(Long notificationId) {
         log.info("Marking notification as read. id={}", notificationId);
 
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
-
-        notification.setIsRead(true);
-        notificationRepository.save(notification);
+        notificationRepository.markAsRead(notificationId);
 
         log.info("Notification marked as read. id={}", notificationId);
     }
 
-    @Override
+@Override
+    @Transactional
     public void markAllRead(Long recipientId) {
         log.info("Marking all notifications as read for recipientId={}", recipientId);
 
-        List<Notification> unread =
-                notificationRepository.findByRecipientIdAndIsRead(recipientId, false);
-
-        unread.forEach(n -> n.setIsRead(true));
-        notificationRepository.saveAll(unread);
+        notificationRepository.markAllRead(recipientId);
 
         log.info("All notifications marked as read for recipientId={}", recipientId);
     }
+
 
     @Override
     public List<NotificationResponseDto> getByRecipient(Long recipientId) {
         log.info("Fetching notifications for recipientId={}", recipientId);
 
         List<NotificationResponseDto> result =
-                notificationRepository.findByRecipientId(recipientId)
+                notificationRepository.findByRecipientIdOrderBySentAtDesc(recipientId)
                         .stream()
                         .map(responseMapper::mapTo)
                         .toList();
+
 
         log.info("Fetched {} notifications for recipientId={}", result.size(), recipientId);
         return result;
@@ -196,7 +194,8 @@ public class NotificationServiceImpl implements NotificationService {
         return count;
     }
 
-    @Override
+@Override
+    @Transactional
     public void deleteNotification(Long notificationId) {
         log.info("Deleting notification id={}", notificationId);
 
@@ -204,4 +203,5 @@ public class NotificationServiceImpl implements NotificationService {
 
         log.info("Notification deleted id={}", notificationId);
     }
+
 }
