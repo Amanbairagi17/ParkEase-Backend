@@ -2,6 +2,11 @@ spring:
   application:
     name: parkinglot-service
 
+  boot:
+    admin:
+      client:
+        url: http://localhost:9090
+
   datasource:
     url: ${DATABASE}
     username: ${USERNAME}
@@ -26,3 +31,17 @@ eureka:
   instance:
     prefer-ip-address: true
     instance-id: ${spring.application.name}:${server.port}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+  endpoint:
+    health:
+      show-details: always
+
+  info:
+    env:
+      enabled: true

@@ -15,16 +15,22 @@
         <module name="parkinglot-service" />
         <module name="booking-service" />
         <module name="api-gateway" />
+        <module name="admin-server" />
         <module name="parkingspot-service" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="notification-service" target="21" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="admin-server" options="-parameters" />
       <module name="api-gateway" options="-parameters" />
       <module name="auth-service" options="-parameters" />
       <module name="booking-service" options="-parameters" />
       <module name="eureka-service" options="-parameters" />
+      <module name="notification-service" options="-parameters" />
       <module name="notification-sevice" options="-parameters" />
       <module name="parkinglot-service" options="-parameters" />
       <module name="parkingspot-service" options="-parameters" />

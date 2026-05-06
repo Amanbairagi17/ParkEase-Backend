@@ -2,6 +2,11 @@ spring:
   application:
     name: payment-service
 
+  boot:
+    admin:
+      client:
+        url: http://localhost:9090
+
   cloud:
     openfeign:
       okhttp:
@@ -35,3 +40,17 @@ eureka:
 razorpay:
   key: ${RAZORPAY_KEY:rzp_test_placeholder}
   secret: ${RAZORPAY_SECRET:secret_placeholder}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+  endpoint:
+    health:
+      show-details: always
+
+  info:
+    env:
+      enabled: true
