@@ -9,6 +9,8 @@ import com.parkease.payment_service.dtos.RazorpayOrderDto;
 import com.parkease.payment_service.entity.Payment;
 import com.parkease.payment_service.entity.PaymentMode;
 import com.parkease.payment_service.entity.PaymentStatus;
+import com.parkease.payment_service.event.NotificationEventPublisher;
+import com.parkease.payment_service.event.PaymentEventPublisher;
 import com.parkease.payment_service.exception.PaymentNotFoundException;
 import com.parkease.payment_service.mapper.Impl.PaymentRequestMapper;
 import com.parkease.payment_service.mapper.Impl.PaymentResponseMapper;
@@ -42,8 +44,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentResponseMapper responseMapper;
     private final PaymentRequestMapper requestMapper;
-    private final com.parkease.payment_service.event.NotificationEventPublisher notificationPublisher;
-    private final com.parkease.payment_service.event.PaymentEventPublisher paymentEventPublisher;
+    private final NotificationEventPublisher notificationPublisher;
+    private final PaymentEventPublisher paymentEventPublisher;
 
     @Value("${razorpay.key}")
     private String razorpayKey;
@@ -97,7 +99,7 @@ public class PaymentServiceImpl implements PaymentService {
             orderRequest.put("currency", "INR");
             orderRequest.put("receipt", "txn_" + requestDto.getBookingId());
 
-            Order order = client.orders.create(orderRequest);
+            Order order = createOrder(orderRequest);
 
             // 3. Save or refresh a pending payment record for this booking
             Payment payment = paymentRepository.findFirstByBookingIdOrderByPaymentIdDesc(requestDto.getBookingId())
@@ -212,7 +214,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         try {
-            com.razorpay.Refund refund = client.payments.refund(payment.getRazorpayPaymentId());
+            com.razorpay.Refund refund = refundPayment(payment.getRazorpayPaymentId());
             log.info("Razorpay refund processed. refundId={}", Optional.ofNullable(refund.get("id")));
             
             payment.setStatus(PaymentStatus.REFUNDED);
@@ -223,6 +225,14 @@ public class PaymentServiceImpl implements PaymentService {
             log.error("Error processing Razorpay refund", e);
             throw new RuntimeException("Refund failed: " + e.getMessage());
         }
+    }
+
+    protected Order createOrder(JSONObject orderRequest) throws RazorpayException {
+        return client.orders.create(orderRequest);
+    }
+
+    protected com.razorpay.Refund refundPayment(String razorpayPaymentId) throws RazorpayException {
+        return client.payments.refund(razorpayPaymentId);
     }
 
     @Override

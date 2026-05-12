@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotificationEventPublisher.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">payment-service</a> &gt; <a href="index.source.html" class="el_package">com.parkease.payment_service.event</a> &gt; <span class="el_source">NotificationEventPublisher.java</span></div><h1>NotificationEventPublisher.java</h1><pre class="source lang-java linenums">package com.parkease.payment_service.event;
+
+import com.parkease.payment_service.dtos.NotificationEventDto;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+
+@Component
+@RequiredArgsConstructor
+<span class="fc" id="L13">@Slf4j</span>
+public class NotificationEventPublisher {
+
+    private final RabbitTemplate rabbitTemplate;
+
+    private static final String EXCHANGE    = &quot;notification.exchange&quot;;
+    private static final String PAYMENT_KEY = &quot;notification.payment&quot;;
+
+    public void publishPaymentSuccess(Long userId, Long bookingId, BigDecimal amount, String transactionId) {
+<span class="fc" id="L22">        NotificationEventDto event = NotificationEventDto.builder()</span>
+<span class="fc" id="L23">                .recipientId(userId)</span>
+<span class="fc" id="L24">                .type(&quot;PAYMENT&quot;)</span>
+<span class="fc" id="L25">                .title(&quot;Payment Successful!&quot;)</span>
+<span class="fc" id="L26">                .message(String.format(&quot;Payment of ₹%s processed successfully for Booking ID: %d. Transaction ID: %s&quot;, </span>
+<span class="fc" id="L27">                        amount.toString(), bookingId, transactionId))</span>
+<span class="fc" id="L28">                .channel(&quot;APP&quot;) // Start with APP, can extend to EMAIL if needed</span>
+<span class="fc" id="L29">                .relatedId(bookingId)</span>
+<span class="fc" id="L30">                .relatedType(&quot;BOOKING&quot;)</span>
+<span class="fc" id="L31">                .build();</span>
+
+<span class="fc" id="L33">        publish(PAYMENT_KEY, event);</span>
+<span class="fc" id="L34">        log.info(&quot;Published PAYMENT_SUCCESS event. userId={}, bookingId={}&quot;, userId, bookingId);</span>
+<span class="fc" id="L35">    }</span>
+
+    private void publish(String routingKey, NotificationEventDto event) {
+        try {
+<span class="fc" id="L39">            rabbitTemplate.convertAndSend(EXCHANGE, routingKey, event);</span>
+<span class="fc" id="L40">        } catch (Exception e) {</span>
+<span class="fc" id="L41">            log.error(&quot;Failed to publish payment notification. routingKey={}, error={}&quot;, </span>
+<span class="fc" id="L42">                    routingKey, e.getMessage());</span>
+<span class="fc" id="L43">        }</span>
+<span class="fc" id="L44">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

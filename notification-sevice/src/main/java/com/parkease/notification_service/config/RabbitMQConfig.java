@@ -22,6 +22,8 @@ public class RabbitMQConfig {
     public static final String CHECKIN_QUEUE   = "notification.checkin.queue";
     public static final String CHECKOUT_QUEUE  = "notification.checkout.queue";
     public static final String EXPIRY_QUEUE    = "notification.expiry.queue";
+    public static final String ADMIN_BROADCAST_QUEUE = "notification.admin.broadcast.queue";
+    public static final String ADMIN_WARN_QUEUE      = "notification.admin.warn.queue";
 
     public static final String EXCHANGE        = "notification.exchange";
 
@@ -30,6 +32,8 @@ public class RabbitMQConfig {
     public static final String CHECKIN_KEY     = "notification.checkin";
     public static final String CHECKOUT_KEY    = "notification.checkout";
     public static final String EXPIRY_KEY      = "notification.expiry";
+    public static final String ADMIN_BROADCAST_KEY = "notification.admin.broadcast";
+    public static final String ADMIN_WARN_KEY      = "notification.admin.warn";
 
     @Bean
     public Queue bookingQueue()  {
@@ -54,6 +58,16 @@ public class RabbitMQConfig {
     @Bean
     public Queue expiryQueue()   {
         return new Queue(EXPIRY_QUEUE,   true);
+    }
+
+    @Bean
+    public Queue adminBroadcastQueue() {
+        return new Queue(ADMIN_BROADCAST_QUEUE, true);
+    }
+
+    @Bean
+    public Queue adminWarnQueue() {
+        return new Queue(ADMIN_WARN_QUEUE, true);
     }
 
 
@@ -90,6 +104,18 @@ public class RabbitMQConfig {
     public Binding expiryBinding() {
         return BindingBuilder.bind(expiryQueue())
                 .to(notificationExchange()).with(EXPIRY_KEY);
+    }
+
+    @Bean
+    public Binding adminBroadcastBinding() {
+        return BindingBuilder.bind(adminBroadcastQueue())
+                .to(notificationExchange()).with(ADMIN_BROADCAST_KEY);
+    }
+
+    @Bean
+    public Binding adminWarnBinding() {
+        return BindingBuilder.bind(adminWarnQueue())
+                .to(notificationExchange()).with(ADMIN_WARN_KEY);
     }
 
     // Converts Java objects to JSON automatically

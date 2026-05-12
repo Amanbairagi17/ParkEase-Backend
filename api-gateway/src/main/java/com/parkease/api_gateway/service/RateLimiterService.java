@@ -12,7 +12,7 @@ public class RateLimiterService {
 
     private final RedisTemplate redisTemplate;
 
-    private static final int LIMIT = 3;
+    private static final int LIMIT = 100;
     private static final Duration WINDOW = Duration.ofSeconds(60);
 
     public boolean isAllowed(String ip) {

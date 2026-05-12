@@ -65,4 +65,6 @@ public class NotificationController {
         notificationService.deleteNotification(notificationId);
         return ResponseEntity.ok("Notification deleted");
     }
+
+
 }

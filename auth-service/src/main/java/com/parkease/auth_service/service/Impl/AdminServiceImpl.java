@@ -5,6 +5,7 @@ import com.parkease.auth_service.dtos.*;
 import com.parkease.auth_service.entity.Role;
 import com.parkease.auth_service.entity.User;
 import com.parkease.auth_service.exception.UserNotFoundException;
+import com.parkease.auth_service.mapper.Impl.AdminUserResponseMapper;
 import com.parkease.auth_service.repository.AdminUserRepository;
 import com.parkease.auth_service.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -21,42 +22,26 @@ public class AdminServiceImpl implements AdminService {
 
     private final AdminUserRepository adminUserRepository;
     private final NotificationServiceClient notificationClient;
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private AdminUserResponseDto toDto(User user) {
-        AdminUserResponseDto dto = new AdminUserResponseDto();
-        dto.setUserId(user.getUserId());
-        dto.setFullName(user.getFullName());
-        dto.setEmail(user.getEmail());
-        dto.setRole(user.getRole() != null ? user.getRole().name() : null);
-        dto.setIsActive(user.getIsActive());
-        dto.setPhone(user.getPhone());
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setProvider(user.getProvider());
-        return dto;
-    }
+    private final AdminUserResponseMapper responseMapper;
 
     private User fetchUser(Long userId) {
         return adminUserRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
     }
 
-    // ── User Management ───────────────────────────────────────────────────────
-
     @Override
     public List<AdminUserResponseDto> getAllUsers() {
         log.info("[Admin] Fetching all non-admin users");
         return adminUserRepository.findAllNonAdminUsers()
                 .stream()
-                .map(this::toDto)
+                .map(responseMapper::mapTo)
                 .toList();
     }
 
     @Override
     public AdminUserResponseDto getUserById(Long userId) {
         log.info("[Admin] Fetching user by id={}", userId);
-        return toDto(fetchUser(userId));
+        return responseMapper.mapTo(fetchUser(userId));
     }
 
     @Override
@@ -100,15 +85,13 @@ public class AdminServiceImpl implements AdminService {
         try {
             roleEnum = Role.valueOf(role.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid role: " + role + ". Valid values: DRIVER, LOT_MANAGER, ADMIN");
+            throw new IllegalArgumentException("Invalid role: " + role + ". Valid values: DRIVER, MANAGER, ADMIN");
         }
         return adminUserRepository.findByRole(roleEnum)
                 .stream()
-                .map(this::toDto)
+                .map(responseMapper::mapTo)
                 .toList();
     }
-
-    // ── Notification Management ───────────────────────────────────────────────
 
     @Override
     public void broadcastToAll(BroadcastRequestDto request) {
@@ -147,7 +130,6 @@ public class AdminServiceImpl implements AdminService {
         notificationClient.sendWarning(userId, user.getEmail(), request.getTitle(), request.getMessage());
     }
 
-    // ── Stats ────────────────────────────────────────────────────────────────
 
     @Override
     public AdminStatsDto getPlatformStats() {

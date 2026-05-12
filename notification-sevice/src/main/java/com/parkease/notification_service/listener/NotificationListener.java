@@ -1,6 +1,7 @@
 package com.parkease.notification_service.listener;
 
 import com.parkease.notification_service.config.RabbitMQConfig;
+import com.parkease.notification_service.dtos.BulkNotificationRequestDto;
 import com.parkease.notification_service.dtos.NotificationRequestDto;
 import com.parkease.notification_service.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,25 @@ public class NotificationListener {
     @RabbitListener(queues = RabbitMQConfig.EXPIRY_QUEUE)
     public void handleExpiry(NotificationRequestDto request) {
         process(request, "EXPIRY");
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.ADMIN_BROADCAST_QUEUE)
+    public void handleAdminBroadcast(BulkNotificationRequestDto request) {
+        log.info("Received ADMIN broadcast for {} recipients", request.getRecipientIds().size());
+        try {
+            notificationService.sendBulk(
+                    request.getRecipientIds(),
+                    request.getTitle(),
+                    request.getMessage()
+            );
+        } catch (Exception e) {
+            log.error("Failed to process ADMIN broadcast: {}", e.getMessage());
+        }
+    }
+
+    @RabbitListener(queues = RabbitMQConfig.ADMIN_WARN_QUEUE)
+    public void handleAdminWarn(NotificationRequestDto request) {
+        process(request, "ADMIN_WARN");
     }
 
     private void process(NotificationRequestDto request, String type) {

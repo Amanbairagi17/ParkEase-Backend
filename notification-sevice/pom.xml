@@ -30,6 +30,30 @@
 		<java.version>21</java.version>
 		<spring-cloud.version>2025.1.1</spring-cloud.version>
 		<spring-boot-admin.version>4.0.3</spring-boot-admin.version>
+		<sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+		<sonar.coverage.exclusions>
+			src/main/java/**/config/**,
+			src/main/java/**/configs/**,
+			src/main/java/**/dto/**,
+			src/main/java/**/dtos/**,
+			src/main/java/**/entity/**,
+			src/main/java/**/entities/**,
+			src/main/java/**/model/**,
+			src/main/java/**/listener/**,
+			src/main/java/**/exception/**,
+			src/main/java/**/exceptions/**,
+			src/main/java/**/constant/**,
+			src/main/java/**/constants/**,
+			src/main/java/**/enum/**,
+			src/main/java/**/enums/**,
+			src/main/java/**/mapper/**,
+			src/main/java/**/mappers/**,
+			src/main/java/**/repository/**,
+			src/main/java/**/repositories/**,
+			src/main/java/**/util/**,
+			src/main/java/**/utils/**,
+			src/main/java/**/*Application.java
+		</sonar.coverage.exclusions>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -111,6 +135,11 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
@@ -188,6 +217,37 @@
 							</annotationProcessorPaths>
 						</configuration>
 					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+
+				<configuration>
+					<excludes>
+						<exclude>**/*MockitoMock*</exclude>
+						<exclude>**/*$MockitoMock$*</exclude>
+						<exclude>**/*$$*</exclude>
+					</excludes>
+				</configuration>
+
+				<executions>
+
+					<execution>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+
 				</executions>
 			</plugin>
 		</plugins>

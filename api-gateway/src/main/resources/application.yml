@@ -79,6 +79,16 @@ spring:
                   - MANAGER
                   - ADMIN
 
+        - id: admin-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/admin/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - ADMIN
+
         - id: vehicle-service
           uri: lb://vehicle-service
           predicates:
