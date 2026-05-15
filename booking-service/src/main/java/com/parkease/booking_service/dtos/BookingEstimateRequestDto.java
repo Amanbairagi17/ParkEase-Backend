@@ -17,7 +17,8 @@ public class BookingEstimateRequestDto {
     @Positive(message = "Spot id must be greater than 0")
     private Long spotId;
 
-    @NotNull(message = "Start time is required")
+    private com.parkease.booking_service.entity.BookingType bookingType;
+
     private LocalDateTime startTime;
 
     @NotNull(message = "End time is required")

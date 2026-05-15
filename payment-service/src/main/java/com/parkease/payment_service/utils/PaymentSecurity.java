@@ -38,4 +38,8 @@ public class PaymentSecurity {
 
         return userId != null && userId.equals(currentUserId);
     }
+
+    public boolean isCurrentUser(Long userId) {
+        return SecurityUtils.isCurrentUser(userId);
+    }
 }

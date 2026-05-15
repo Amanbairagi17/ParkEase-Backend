@@ -1,9 +1,10 @@
 package com.parkease.booking_service.utils;
 
 import com.parkease.booking_service.repository.BookingRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-@Component
+@Component("bookingSecurity")
 public class BookingSecurity {
 
     private final BookingRepository bookingRepository;
@@ -21,5 +22,9 @@ public class BookingSecurity {
         Long bookingUserId = bookingRepository.findUserIdByBookingId(bookingId);
 
         return currentUserId.equals(bookingUserId);
+    }
+
+    public boolean isCurrentUser(Long userId) {
+        return SecurityUtils.isCurrentUser(userId);
     }
 }

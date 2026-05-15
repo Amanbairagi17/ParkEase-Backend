@@ -16,15 +16,23 @@ public class PaymentEventPublisher {
     private static final String EXCHANGE = "payment.exchange";
     private static final String SUCCESS_KEY = "payment.success";
 
-    public void publishPaymentSuccess(Long bookingId) {
+    public void publishPaymentSuccess(com.parkease.payment_service.entity.Payment payment) {
         PaymentSuccessEventDto event = PaymentSuccessEventDto.builder()
-                .bookingId(bookingId)
-                .status("SUCCESS")
+                .paymentId(payment.getPaymentId())
+                .bookingId(payment.getBookingId())
+                .userId(payment.getUserId())
+                .amount(payment.getAmount())
+                .transactionId(payment.getTransactionId())
+                .paymentMode(payment.getMode() != null ? payment.getMode().name() : null)
+                .razorpayOrderId(payment.getRazorpayOrderId())
+                .razorpayPaymentId(payment.getRazorpayPaymentId())
+                .status(payment.getStatus() != null ? payment.getStatus().name() : "UNKNOWN")
                 .build();
 
         try {
             rabbitTemplate.convertAndSend(EXCHANGE, SUCCESS_KEY, event);
-            log.info("Published payment success event for bookingId={}", bookingId);
+            log.info("Published payment success event for bookingId={}, paymentId={}",
+                    payment.getBookingId(), payment.getPaymentId());
         } catch (Exception e) {
             log.error("Failed to publish payment success event", e);
         }

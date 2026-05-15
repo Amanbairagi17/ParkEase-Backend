@@ -30,11 +30,6 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(LocalDateTime.now(), ex.getMessage(), request.getRequestURI()));
     }
 
-    @ExceptionHandler({PdfGenerationException.class})
-    public ResponseEntity<ErrorResponse> handlePdf(RuntimeException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse(LocalDateTime.now(), ex.getMessage(), request.getRequestURI()));
-    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {

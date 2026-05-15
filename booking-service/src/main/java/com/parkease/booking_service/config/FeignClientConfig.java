@@ -13,6 +13,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Slf4j
 public class FeignClientConfig {
 
+    private static final String USER_ID_HEADER = "X-User-Id";
+    private static final String ROLES_HEADER = "X-User-Roles";
+    private static final String USER_NAME_HEADER = "X-User-Name";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+
     @Bean
     public RequestInterceptor requestInterceptor() {
         return (RequestTemplate template) -> {
@@ -24,21 +29,29 @@ public class FeignClientConfig {
                 HttpServletRequest request = attributes.getRequest();
 
                 // Forward gateway headers to downstream services
-                String userId = request.getHeader("X-User-Id");
-                String roles  = request.getHeader("X-User-Roles");
-                String name   = request.getHeader("X-User-Name");
+                String userId = request.getHeader(USER_ID_HEADER);
+                String roles = request.getHeader(ROLES_HEADER);
+                String name = request.getHeader(USER_NAME_HEADER);
+                String authorization = request.getHeader(AUTHORIZATION_HEADER);
 
                 if (userId != null) {
-                    template.header("X-User-Id", userId);
+                    template.header(USER_ID_HEADER, userId);
                     log.debug("Forwarding X-User-Id={} to downstream service", userId);
                 }
                 if (roles != null) {
-                    template.header("X-User-Roles", roles);
+                    template.header(ROLES_HEADER, roles);
                     log.debug("Forwarding X-User-Roles={} to downstream service", roles);
                 }
                 if (name != null) {
-                    template.header("X-User-Name", name);
+                    template.header(USER_NAME_HEADER, name);
                 }
+                if (authorization != null) {
+                    template.header(AUTHORIZATION_HEADER, authorization);
+                }
+                log.debug("Feign outgoing headers. AuthorizationPresent={}, X-User-Id={}, X-User-Roles={}",
+                        authorization != null, userId, roles);
+            } else {
+                log.warn("No request context available for Feign propagation");
             }
         };
     }

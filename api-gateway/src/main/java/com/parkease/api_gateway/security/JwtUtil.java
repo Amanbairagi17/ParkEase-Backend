@@ -5,6 +5,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import java.util.Date;
 import java.util.List;
 
 @Component
+@Slf4j
 public class JwtUtil {
 
     @Value("${security.jwt.secret}")
@@ -28,9 +30,10 @@ public class JwtUtil {
             return Jwts.parserBuilder()
                     .setSigningKey(getKey())
                     .build()
-                    .parseClaimsJws(token)
+                    .parseClaimsJws(normalizeToken(token))
                     .getBody();
         } catch (Exception e) {
+            log.warn("JWT parsing failed: {}", e.getMessage());
             throw new AccessDeniedException("Invalid JWT token");
         }
     }
@@ -40,7 +43,28 @@ public class JwtUtil {
     }
 
     public Long extractUserId(String token) {
-        return extractAllClaims(token).get("userId", Long.class);
+        Claims claims = extractAllClaims(token);
+        Object value = claims.get("userId");
+        if (value == null) {
+            value = claims.get("id");
+        }
+        if (value == null) {
+            value = claims.getSubject();
+        }
+
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+
+        if (value instanceof String stringValue) {
+            try {
+                return Long.parseLong(stringValue);
+            } catch (NumberFormatException ex) {
+                log.warn("Unable to parse userId claim: {}", stringValue);
+            }
+        }
+
+        throw new AccessDeniedException("No valid userId found in token");
     }
 
     public Date extractExpiration(String token) {
@@ -65,14 +89,10 @@ public class JwtUtil {
 
     public Claims validateToken(String token) {
         try {
-            if (token.startsWith("Bearer ")) {
-                token = token.substring(7);
-            }
-
             return Jwts.parserBuilder()
                     .setSigningKey(getKey())
                     .build()
-                    .parseClaimsJws(token)
+                    .parseClaimsJws(normalizeToken(token))
                     .getBody();
 
         } catch (JwtException | IllegalArgumentException e) {
@@ -86,6 +106,9 @@ public class JwtUtil {
         Claims claims = extractAllClaims(token);
 
         Object rolesObj = claims.get("roles");
+        if (rolesObj == null) {
+            rolesObj = claims.get("authorities");
+        }
 
         if (rolesObj == null) {
             throw new AccessDeniedException("No roles found in token");
@@ -96,5 +119,13 @@ public class JwtUtil {
         }
 
         return (List<String>) rolesObj;
+    }
+
+    private String normalizeToken(String token) {
+        if (token == null || token.isBlank()) {
+            throw new AccessDeniedException("Missing JWT token");
+        }
+
+        return token.startsWith("Bearer ") ? token.substring(7).trim() : token.trim();
     }
 }

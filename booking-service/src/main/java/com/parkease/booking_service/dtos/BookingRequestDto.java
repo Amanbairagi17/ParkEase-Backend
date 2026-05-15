@@ -36,7 +36,8 @@ public class BookingRequestDto {
     @NotNull(message = "Pricing type is required")
     private PricingType pricingType;
 
-    @NotNull(message = "Start time is required")
+    // For WALK_IN_BOOKING: startTime is optional — backend auto-sets it to current time
+    // For PRE_BOOKING: startTime is required and must be in the future
     private LocalDateTime startTime;
 
     @NotNull(message = "End time is required")

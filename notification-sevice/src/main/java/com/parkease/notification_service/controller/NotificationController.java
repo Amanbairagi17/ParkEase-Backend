@@ -32,34 +32,34 @@ public class NotificationController {
         return ResponseEntity.ok("Bulk notification sent");
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'DRIVER')")
     @GetMapping("/{recipientId}")
     public ResponseEntity<List<NotificationResponseDto>> getByRecipient(
             @PathVariable Long recipientId) {
         return ResponseEntity.ok(notificationService.getByRecipient(recipientId));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'DRIVER')")
     @GetMapping("/{recipientId}/unread-count")
     public ResponseEntity<Integer> getUnreadCount(@PathVariable Long recipientId) {
         return ResponseEntity.ok(notificationService.getUnreadCount(recipientId));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'DRIVER')")
     @PutMapping("/{notificationId}/read")
     public ResponseEntity<String> markAsRead(@PathVariable Long notificationId) {
         notificationService.markAsRead(notificationId);
         return ResponseEntity.ok("Marked as read");
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'DRIVER')")
     @PutMapping("/{recipientId}/read-all")
     public ResponseEntity<String> markAllRead(@PathVariable Long recipientId) {
         notificationService.markAllRead(recipientId);
         return ResponseEntity.ok("All marked as read");
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'DRIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'DRIVER')")
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<String> delete(@PathVariable Long notificationId) {
         notificationService.deleteNotification(notificationId);

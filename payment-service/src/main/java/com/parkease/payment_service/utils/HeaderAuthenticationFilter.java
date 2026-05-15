@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +16,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Component
+@Slf4j
 public class HeaderAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
@@ -24,19 +26,29 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String userId = request.getHeader("X-User-Id");
-        String roles  = request.getHeader("X-User-Roles");
+        String roles = request.getHeader("X-User-Roles");
+        String authorization = request.getHeader("Authorization");
 
-        if (userId != null && roles != null) {
-            List<SimpleGrantedAuthority> authorities =
-                    Arrays.stream(roles.split(","))
-                            .map(SimpleGrantedAuthority::new)
-                            .toList();
+        log.debug("Incoming auth headers. AuthorizationPresent={}, X-User-Id={}, X-User-Roles={}",
+                authorization != null, userId, roles);
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            Long.parseLong(userId), null, authorities);
+        if (SecurityContextHolder.getContext().getAuthentication() == null
+                && userId != null && !userId.isBlank()
+                && roles != null && !roles.isBlank()) {
+            try {
+                List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
+                        .map(String::trim)
+                        .filter(role -> !role.isBlank())
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(Long.parseLong(userId.trim()), null, authorities);
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (NumberFormatException ex) {
+                log.warn("Invalid X-User-Id header: {}", userId);
+            }
         }
 
         filterChain.doFilter(request, response);

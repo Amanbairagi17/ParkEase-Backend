@@ -17,6 +17,9 @@ public class ParkingSpot {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long spotId;
 
+    @Version
+    private Long version;
+
     @Column(name = "lot_id", nullable = false)
     private Long lotId;
 

@@ -18,7 +18,10 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.TransactionSystemException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -128,11 +131,12 @@ public class ParkingSpotServiceImpl implements ParkingSpotService {
     }
 
     @Override
+    @Transactional
     public ParkingSpotResponseDto occupySpot(Long spotId) {
 
         log.info("Occupying spot | spotId={}", spotId);
 
-        ParkingSpot spot = findSpotOrThrow(spotId);
+        ParkingSpot spot = findSpotForUpdateOrThrow(spotId);
 
         if (spot.getStatus() != SpotStatus.RESERVED) {
             log.warn("Occupy failed | spotId={} | status={}", spotId, spot.getStatus());
@@ -141,27 +145,29 @@ public class ParkingSpotServiceImpl implements ParkingSpotService {
 
         spot.setStatus(SpotStatus.OCCUPIED);
 
-        return responseMapper.mapTo(parkingSpotRepository.save(spot));
+        return responseMapper.mapTo(saveAndFlushWithRetry(spot, "occupy", spotId));
     }
 
     @Override
+    @Transactional
     public ParkingSpotResponseDto releaseSpot(Long spotId) {
         log.info("Starting release process for spotId={}", spotId);
-        ParkingSpot spot = findSpotOrThrow(spotId);
+        ParkingSpot spot = findSpotForUpdateOrThrow(spotId);
         if (spot.getStatus() != SpotStatus.OCCUPIED && spot.getStatus() != SpotStatus.RESERVED) {
             log.warn("Cannot release spot. Spot is not OCCUPIED or RESERVED. spotId={}, status={}", spotId, spot.getStatus());
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Spot cannot be released: current status is " + spot.getStatus());
         }
         spot.setStatus(SpotStatus.AVAILABLE);
-        ParkingSpot updatedSpot = parkingSpotRepository.save(spot);
+        ParkingSpot updatedSpot = saveAndFlushWithRetry(spot, "release", spotId);
         log.info("Successfully released parking spot. spotId={}", spotId);
         return responseMapper.mapTo(updatedSpot);
     }
 
     @Override
+    @Transactional
     public ParkingSpotResponseDto updateSpot(Long spotId, ParkingSpotRequestDto requestDto) {
-        ParkingSpot existingSpot = findSpotOrThrow(spotId);
+        ParkingSpot existingSpot = findSpotForUpdateOrThrow(spotId);
         validateLotExists(requestDto.getLotId());
 
         boolean changedIdentity = !existingSpot.getLotId().equals(requestDto.getLotId())
@@ -184,7 +190,7 @@ public class ParkingSpotServiceImpl implements ParkingSpotService {
             existingSpot.setStatus(requestDto.getStatus());
         }
 
-        return responseMapper.mapTo(parkingSpotRepository.save(existingSpot));
+        return responseMapper.mapTo(saveAndFlushWithRetry(existingSpot, "update", spotId));
     }
 
     @Override
@@ -206,11 +212,12 @@ public class ParkingSpotServiceImpl implements ParkingSpotService {
     }
 
     @Override
+    @Transactional
     public ParkingSpotResponseDto reserveSpot(Long spotId) {
 
         log.info("Reserving spot | spotId={}", spotId);
 
-        ParkingSpot spot = findSpotOrThrow(spotId);
+        ParkingSpot spot = findSpotForUpdateOrThrow(spotId);
 
         if (spot.getStatus() != SpotStatus.AVAILABLE) {
             log.warn("Reserve failed | spotId={} | status={}", spotId, spot.getStatus());
@@ -219,7 +226,7 @@ public class ParkingSpotServiceImpl implements ParkingSpotService {
 
         spot.setStatus(SpotStatus.RESERVED);
 
-        return responseMapper.mapTo(parkingSpotRepository.save(spot));
+        return responseMapper.mapTo(saveAndFlushWithRetry(spot, "reserve", spotId));
     }
 
     @Override
@@ -242,10 +249,32 @@ public class ParkingSpotServiceImpl implements ParkingSpotService {
                 });
     }
 
+    private ParkingSpot findSpotForUpdateOrThrow(Long spotId) {
+        return parkingSpotRepository.findByIdForUpdate(spotId)
+                .orElseThrow(() -> {
+                    log.error("Spot not found | spotId={}", spotId);
+                    return new ParkingSpotNotFoundException("Spot not found: " + spotId);
+                });
+    }
+
     private void validateUniqueSpotNumber(Long lotId, String spotNumber) {
         if (parkingSpotRepository.existsByLotIdAndSpotNumberIgnoreCase(lotId, spotNumber)) {
             log.warn("Duplicate spot | lotId={} | spotNumber={}", lotId, spotNumber);
             throw new DuplicateSpotException("Duplicate spot number");
+        }
+    }
+
+    private ParkingSpot saveAndFlushWithRetry(ParkingSpot spot, String action, Long spotId) {
+        try {
+            return parkingSpotRepository.saveAndFlush(spot);
+        } catch (ObjectOptimisticLockingFailureException exception) {
+            log.warn("Optimistic lock conflict while {} spotId={}", action, spotId, exception);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Spot update conflict. Please retry the request.");
+        } catch (TransactionSystemException exception) {
+            log.error("Transaction commit failed while {} spotId={}", action, spotId, exception);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Spot update failed due to concurrent modification.");
         }
     }
 }

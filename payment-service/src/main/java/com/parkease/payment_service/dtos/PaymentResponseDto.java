@@ -21,4 +21,5 @@ public class PaymentResponseDto {
     private LocalDateTime paidAt;
     private LocalDateTime refundedAt;
     private String description;
+    private String idempotencyKey;
 }

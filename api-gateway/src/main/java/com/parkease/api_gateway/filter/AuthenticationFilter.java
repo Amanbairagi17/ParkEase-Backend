@@ -52,8 +52,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         String token = authHeader.substring(7);
-        log.info("Token : " + token);
-        log.debug("Authorization token received (length={})", token != null ? token.length() : 0);
+        log.debug("Authorization header received for path={}, bearerLength={}", path, token.length());
         try {
             if (!jwtUtil.isTokenValid(token)) {
                 return onError(exchange, "Invalid Token", HttpStatus.UNAUTHORIZED);
@@ -67,10 +66,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 return onError(exchange, "No roles found in token", HttpStatus.FORBIDDEN);
             }
 
-            log.info("Token valid for user: {}, userId={}, roles={}", username, userId, roles);
+            log.info("Gateway auth success. user={}, userId={}, roles={}", username, userId, roles);
 
             ServerWebExchange modifiedExchange = exchange.mutate()
                     .request(builder -> builder
+                            .header(HttpHeaders.AUTHORIZATION, authHeader)
                             .header("X-User-Name", username)
                             .header("X-User-Id", String.valueOf(userId))
                             .header("X-User-Roles", String.join(",", roles))
@@ -89,7 +89,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         log.error("Authentication Error: {}", err);
         exchange.getResponse().setStatusCode(status);
         exchange.getResponse().getHeaders().add("Content-Type", "application/json");
-        return exchange.getResponse().setComplete();
+        return exchange.getResponse().writeWith(
+                Mono.just(exchange.getResponse().bufferFactory().wrap(("{\"error\":\"" + err + "\"}").getBytes()))
+        );
     }
 
     @Override

@@ -46,13 +46,34 @@ public class PaymentController {
                 .body(paymentService.processPayment(requestDto));
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/initialize")
+    public ResponseEntity<PaymentResponseDto> initializePayment(@Valid @RequestBody PaymentRequestDto requestDto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(paymentService.initializePayment(requestDto));
+    }
+
+    @PreAuthorize("hasAnyRole('DRIVER','ADMIN')")
+    @PostMapping("/process")
+    public ResponseEntity<PaymentResponseDto> processDriverPayment(@Valid @RequestBody PaymentRequestDto requestDto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(paymentService.processPayment(requestDto));
+    }
+
+    @PreAuthorize("permitAll()")
+    @PostMapping("/webhook")
+    public ResponseEntity<PaymentResponseDto> webhook(@RequestBody String payload,
+                                                      @RequestHeader(value = "X-Razorpay-Signature", required = false) String signature) {
+        return ResponseEntity.ok(paymentService.handleWebhook(payload, signature));
+    }
+
     @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isBookingOwner(#bookingId)")
     @GetMapping("/booking/{bookingId}")
     public ResponseEntity<PaymentResponseDto> getByBookingId(@PathVariable Long bookingId) {
         return ResponseEntity.ok(paymentService.getByBookingId(bookingId));
     }
 
-@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isCurrentUser(#userId)")
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<PaymentResponseDto>> getByUserId(@PathVariable Long userId) {
         return ResponseEntity.ok(paymentService.getByUserId(userId));
@@ -64,13 +85,32 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.refundPayment(paymentId));
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isBookingOwner(#bookingId)")
+    @PostMapping("/booking/{bookingId}/refund")
+    public ResponseEntity<PaymentResponseDto> refundByBookingId(@PathVariable Long bookingId) {
+        return ResponseEntity.ok(paymentService.refundByBookingId(bookingId));
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isBookingOwner(#bookingId)")
+    @GetMapping("/{bookingId}/receipt")
+    public ResponseEntity<String> getReceiptUrl(@PathVariable Long bookingId) {
+        PaymentResponseDto payment = paymentService.getByBookingId(bookingId);
+        return ResponseEntity.ok("/api/receipts/payment/" + payment.getPaymentId());
+    }
+
+    @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isOwner(#paymentId)")
+    @GetMapping("/{paymentId}")
+    public ResponseEntity<PaymentResponseDto> getByPaymentId(@PathVariable Long paymentId) {
+        return ResponseEntity.ok(paymentService.getByPaymentId(paymentId));
+    }
+
     @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isOwner(#paymentId)")
     @GetMapping("/{paymentId}/status")
     public ResponseEntity<String> getPaymentStatus(@PathVariable Long paymentId) {
         return ResponseEntity.ok(paymentService.getPaymentStatus(paymentId));
     }
 
-@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isCurrentUser(#userId)")
     @GetMapping("/history/{userId}")
     public ResponseEntity<List<PaymentResponseDto>> getTransactionHistory(@PathVariable Long userId) {
         return ResponseEntity.ok(paymentService.getTransactionHistory(userId));
@@ -82,7 +122,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getAllPayments());
     }
 
-@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    @PreAuthorize("hasRole('ADMIN') or @paymentSecurity.isCurrentUser(#userId)")
     @GetMapping("/revenue/{userId}")
     public ResponseEntity<BigDecimal> getTotalRevenue(@PathVariable Long userId) {
         return ResponseEntity.ok(paymentService.getTotalRevenueForUser(userId));

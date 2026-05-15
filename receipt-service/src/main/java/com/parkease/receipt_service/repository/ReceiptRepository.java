@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface ReceiptRepository extends JpaRepository<Receipt, String> {
     Optional<Receipt> findByPaymentId(Long paymentId);
     List<Receipt> findByUserIdOrderByGeneratedAtDesc(Long userId);
+    Optional<Receipt> findByPaymentIdAndUserId(Long paymentId, Long userId);
 }

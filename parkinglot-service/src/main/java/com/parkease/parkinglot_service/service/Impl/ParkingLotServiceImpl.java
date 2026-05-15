@@ -14,6 +14,7 @@ import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -139,9 +140,10 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     }
 
     @Override
+    @Transactional
     public void decrementAvailable(Long lotId) {
         log.info("Decrementing available spots for lotId={}", lotId);
-        ParkingLot existingLot = findLotOrThrow(lotId);
+        ParkingLot existingLot = findLotForUpdateOrThrow(lotId);
 
         if (existingLot.getAvailableSpots() <= 0) {
             log.warn("Cannot decrement available spots. No spots left. lotId={}", lotId);
@@ -154,8 +156,9 @@ public class ParkingLotServiceImpl implements ParkingLotService {
     }
 
     @Override
+    @Transactional
     public void incrementAvailable(Long lotId) {
-        ParkingLot existingLot = findLotOrThrow(lotId);
+        ParkingLot existingLot = findLotForUpdateOrThrow(lotId);
 
         if (existingLot.getAvailableSpots() >= existingLot.getTotalSpots()) {
             throw new IllegalStateException("Available spots cannot exceed total spots");
@@ -175,6 +178,13 @@ public class ParkingLotServiceImpl implements ParkingLotService {
 
     private ParkingLot findLotOrThrow(Long lotId) {
         return (ParkingLot) parkingLotRepository.findById(lotId)
+                .orElseThrow(() -> new ParkingLotNotFoundException(
+                        "Parking lot not found with id: " + lotId
+                ));
+    }
+
+    private ParkingLot findLotForUpdateOrThrow(Long lotId) {
+        return parkingLotRepository.findByIdForUpdate(lotId)
                 .orElseThrow(() -> new ParkingLotNotFoundException(
                         "Parking lot not found with id: " + lotId
                 ));

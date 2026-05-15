@@ -2,52 +2,44 @@ package com.parkease.receipt_service.config;
 
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Component
 @Slf4j
 public class FeignAuthInterceptor implements RequestInterceptor {
 
-    @Value("${receipt.service-auth.user-id:0}")
-    private String serviceUserId;
-
-    @Value("${receipt.service-auth.roles:ROLE_ADMIN}")
-    private String serviceRoles;
-
     @Override
     public void apply(RequestTemplate template) {
-
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        if (auth != null) {
-            Object principal = auth.getPrincipal();
-            String userIdStr = null;
-
-            if (principal instanceof Long longId) {
-                userIdStr = String.valueOf(longId);
-            } else if (principal instanceof String strId) {
-                userIdStr = strId;
-            }
-
-            String roles = auth.getAuthorities()
-                    .stream()
-                    .map(a -> a.getAuthority())
-                    .reduce((a, b) -> a + "," + b)
-                    .orElse("");
-
-            if (userIdStr != null) {
-                template.header("X-User-Id", userIdStr);
-                template.header("X-User-Roles", roles);
-            }
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            log.warn("No request context available for receipt-service Feign propagation");
             return;
         }
 
-        template.header("X-User-Id", serviceUserId);
-        template.header("X-User-Roles", serviceRoles);
-        log.debug("Feign fallback headers: X-User-Id={}, X-User-Roles={}", serviceUserId, serviceRoles);
+        HttpServletRequest request = attributes.getRequest();
+        String authorization = request.getHeader("Authorization");
+        String userId = request.getHeader("X-User-Id");
+        String roles = request.getHeader("X-User-Roles");
+        String userName = request.getHeader("X-User-Name");
+
+        if (authorization != null) {
+            template.header("Authorization", authorization);
+        }
+        if (userId != null) {
+            template.header("X-User-Id", userId);
+        }
+        if (roles != null) {
+            template.header("X-User-Roles", roles);
+        }
+        if (userName != null) {
+            template.header("X-User-Name", userName);
+        }
+
+        log.debug("Feign outgoing headers. AuthorizationPresent={}, X-User-Id={}, X-User-Roles={}",
+                authorization != null, userId, roles);
     }
 }

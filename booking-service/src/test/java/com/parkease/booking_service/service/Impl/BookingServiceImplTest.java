@@ -2,6 +2,8 @@ package com.parkease.booking_service.service.Impl;
 
 import com.parkease.booking_service.client.ParkingLotServiceClient;
 import com.parkease.booking_service.client.ParkingSpotServiceClient;
+import com.parkease.booking_service.client.PaymentServiceClient;
+import com.parkease.booking_service.client.ReceiptServiceClient;
 import com.parkease.booking_service.dtos.*;
 import com.parkease.booking_service.entity.Booking;
 import com.parkease.booking_service.entity.BookingStatus;
@@ -55,6 +57,12 @@ class BookingServiceImplTest {
 
     @Mock
     private ParkingLotServiceClient parkingLotServiceClient;
+
+        @Mock
+        private PaymentServiceClient paymentServiceClient;
+
+        @Mock
+        private ReceiptServiceClient receiptServiceClient;
 
     @Mock
     private NotificationEventPublisher notificationPublisher;
@@ -369,7 +377,7 @@ class BookingServiceImplTest {
     @Test
     void getActiveBookings_ShouldMapList() {
 
-        when(bookingRepository.findByStatus(BookingStatus.ACTIVE))
+                when(bookingRepository.findByStatusIn(any(List.class)))
                 .thenReturn(List.of(buildBooking()));
 
         when(bookingResponseMapper.mapTo(any(Booking.class)))
@@ -418,7 +426,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CONFIRMED);
 
         when(bookingRepository.findByBookingId(10L))
                 .thenReturn(Optional.of(booking));
@@ -466,7 +474,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CANCELLED);
 
         when(bookingRepository.findByBookingId(10L))
                 .thenReturn(Optional.of(booking));
@@ -482,7 +490,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.RESERVED);
+                booking.setStatus(BookingStatus.CONFIRMED);
 
         when(bookingRepository.findByBookingId(10L))
                 .thenReturn(Optional.of(booking));
@@ -506,7 +514,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.RESERVED);
+                booking.setStatus(BookingStatus.CONFIRMED);
 
         when(bookingRepository.findByBookingId(10L))
                 .thenReturn(Optional.of(booking));
@@ -592,10 +600,25 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CHECKED_IN);
+                booking.setCheckInTime(LocalDateTime.now().minusHours(1));
+
+                PaymentResponseDto payment = new PaymentResponseDto();
+                payment.setPaymentId(99L);
+                payment.setAmount(new BigDecimal("100.00"));
+                payment.setStatus("SUCCESS");
+
+                ReceiptResponseDto receipt = new ReceiptResponseDto();
+                receipt.setReceiptId("r-123");
 
         when(bookingRepository.findByBookingId(10L))
                 .thenReturn(Optional.of(booking));
+
+        when(paymentServiceClient.getByBookingId(10L))
+                .thenReturn(payment);
+
+        when(receiptServiceClient.getByPaymentId(99L))
+                .thenReturn(receipt);
 
         when(bookingRepository.save(any(Booking.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -626,10 +649,25 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CHECKED_IN);
+                booking.setCheckInTime(LocalDateTime.now().minusHours(1));
+
+                PaymentResponseDto payment = new PaymentResponseDto();
+                payment.setPaymentId(88L);
+                payment.setAmount(new BigDecimal("100.00"));
+                payment.setStatus("SUCCESS");
+
+                ReceiptResponseDto receipt = new ReceiptResponseDto();
+                receipt.setReceiptId("r-456");
 
         when(bookingRepository.findByBookingId(10L))
                 .thenReturn(Optional.of(booking));
+
+        when(paymentServiceClient.getByBookingId(10L))
+                .thenReturn(payment);
+
+        when(receiptServiceClient.getByPaymentId(88L))
+                .thenReturn(receipt);
 
         when(bookingRepository.save(any(Booking.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -648,7 +686,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.RESERVED);
+                booking.setStatus(BookingStatus.CONFIRMED);
         booking.setPaid(false);
 
         when(bookingRepository.findByBookingId(10L))
@@ -663,6 +701,7 @@ class BookingServiceImplTest {
         bookingService.markAsPaid(10L);
 
         assertTrue(booking.isPaid());
+                assertEquals(BookingStatus.PAID, booking.getStatus());
     }
 
     @Test
@@ -670,7 +709,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CHECKED_IN);
 
         when(bookingRepository.findByBookingId(10L))
                 .thenReturn(Optional.of(booking));
@@ -683,7 +722,7 @@ class BookingServiceImplTest {
 
         bookingService.markAsPaid(10L);
 
-        assertEquals(BookingStatus.ACTIVE, booking.getStatus());
+                assertEquals(BookingStatus.PAID, booking.getStatus());
         assertTrue(booking.isPaid());
     }
 
@@ -692,7 +731,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CHECKED_IN);
         booking.setDuration(null);
         booking.setStartTime(LocalDateTime.of(2024, 1, 1, 10, 0));
         booking.setEndTime(LocalDateTime.of(2024, 1, 1, 11, 30));
@@ -716,7 +755,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CHECKED_IN);
 
         when(bookingRepository.findByBookingId(10L))
                 .thenReturn(Optional.of(booking));
@@ -748,7 +787,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CHECKED_IN);
         booking.setEndTime(LocalDateTime.now().plusHours(2));
 
         when(bookingRepository.findByBookingId(10L))
@@ -765,7 +804,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CHECKED_IN);
         booking.setEndTime(null);
         booking.setStartTime(LocalDateTime.of(2024, 1, 1, 9, 0));
 
@@ -790,7 +829,7 @@ class BookingServiceImplTest {
 
         Booking booking = buildBooking();
 
-        booking.setStatus(BookingStatus.ACTIVE);
+                booking.setStatus(BookingStatus.CHECKED_IN);
 
         LocalDateTime newEnd =
                 booking.getEndTime().plusHours(2);
@@ -1033,7 +1072,7 @@ class BookingServiceImplTest {
                 LocalDateTime.now().plusHours(1)
         );
 
-        booking.setStatus(BookingStatus.RESERVED);
+        booking.setStatus(BookingStatus.CONFIRMED);
 
         return booking;
     }

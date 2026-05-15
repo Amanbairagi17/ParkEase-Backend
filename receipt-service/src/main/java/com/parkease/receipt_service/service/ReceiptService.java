@@ -13,7 +13,8 @@ public interface ReceiptService {
 
     ReceiptResponseDto getReceipt(String receiptId);
 
+    ReceiptResponseDto getReceiptByPayment(Long paymentId);
+
     List<ReceiptResponseDto> getReceiptsByUser(Long userId);
 
-    byte[] downloadReceipt(String receiptId);
 }

@@ -38,7 +38,7 @@ public class VehicleController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or #ownerId == authentication.principal")
+    @PreAuthorize("hasRole('ADMIN') or @vehicleSecurity.isCurrentUser(#ownerId)")
     @GetMapping("/getVehiclesByOwner/{ownerId}")
     public ResponseEntity<List<VehicleResponseDto>> getVehiclesByOwner(@PathVariable Long ownerId){
         log.info("Request received to fetch vehicles. ownerId={}", ownerId);
@@ -47,7 +47,7 @@ public class VehicleController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @PreAuthorize("hasRole('DRIVER') or #ownerId == authentication.principal")
+    @PreAuthorize("hasRole('DRIVER') or @vehicleSecurity.isCurrentUser(#ownerId)")
     @GetMapping("/user/{ownerId}")
     public ResponseEntity<List<VehicleResponseDto>> getVehiclesByUser(@PathVariable Long ownerId){
         return ResponseEntity.status(HttpStatus.OK).body(vehicleService.getVehiclesByOwner(ownerId));

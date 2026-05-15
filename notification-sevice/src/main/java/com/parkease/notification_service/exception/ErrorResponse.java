@@ -1,4 +1,4 @@
-package com.parkease.auth_service.exception;
+package com.parkease.notification_service.exception;
 
 import lombok.Data;
 

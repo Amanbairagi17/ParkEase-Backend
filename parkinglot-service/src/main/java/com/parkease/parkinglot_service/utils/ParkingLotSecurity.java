@@ -26,4 +26,8 @@ public class ParkingLotSecurity {
 
         return currentUserId.equals(Long.valueOf(managerId));
     }
+
+    public boolean isCurrentUser(Long managerId) {
+        return SecurityUtils.isCurrentUser(managerId);
+    }
 }

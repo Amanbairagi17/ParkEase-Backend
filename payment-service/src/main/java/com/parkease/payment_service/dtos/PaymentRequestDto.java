@@ -2,7 +2,6 @@ package com.parkease.payment_service.dtos;
 
 import com.parkease.payment_service.entity.PaymentMode;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -18,4 +17,6 @@ public class PaymentRequestDto {
 
     private String description;
     private String currency = "INR";
+    private BigDecimal amount;
+    private String idempotencyKey;
 }

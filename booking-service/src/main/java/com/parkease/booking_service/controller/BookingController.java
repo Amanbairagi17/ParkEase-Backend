@@ -43,8 +43,11 @@ public class BookingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#bookingId)")
+
+
+    @PreAuthorize("hasAnyRole('DRIVER','MANAGER','ADMIN')")
     @GetMapping("/{bookingId}")
+
     public ResponseEntity<BookingResponseDto> getBookingById(@PathVariable Long bookingId) {
         log.info("Fetching booking by id. bookingId={}", bookingId);
 
@@ -54,7 +57,7 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
-@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    @PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isCurrentUser(#userId)")
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<BookingResponseDto>> getBookingsByUser(@PathVariable Long userId) {
         log.info("Fetching bookings for user. userId={}", userId);
@@ -110,7 +113,7 @@ public class BookingController {
     }
 
     @PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#bookingId)")
-    @PutMapping("/{bookingId}/checkIn")
+    @PutMapping({"/{bookingId}/checkIn", "/{bookingId}/check-in"})
     public ResponseEntity<BookingResponseDto> checkIn(@PathVariable Long bookingId) {
         log.info("Check-in request for booking. bookingId={}", bookingId);
 
@@ -121,7 +124,7 @@ public class BookingController {
     }
 
     @PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isOwner(#bookingId)")
-    @PutMapping("/{bookingId}/checkOut")
+    @PutMapping({"/{bookingId}/checkOut", "/{bookingId}/check-out"})
     public ResponseEntity<BookingResponseDto> checkOut(@PathVariable Long bookingId,
                                                        @RequestParam(required = false) BigDecimal hourlyRate) {
         log.info("Check-out request for booking. bookingId={}", bookingId);
@@ -159,7 +162,7 @@ public class BookingController {
         return ResponseEntity.ok(response);
     }
 
-@PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    @PreAuthorize("hasRole('ADMIN') or @bookingSecurity.isCurrentUser(#userId)")
     @GetMapping("/history/{userId}")
     public ResponseEntity<List<BookingResponseDto>> getBookingHistory(@PathVariable Long userId) {
         log.info("Fetching booking history for userId={}", userId);
@@ -191,6 +194,20 @@ public class BookingController {
 
         log.info("Booking estimate calculated. bookingId={}, estimate={}", bookingId, estimate);
         return ResponseEntity.ok(estimate);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/{bookingId}/mark-paid")
+    public ResponseEntity<BookingResponseDto> markAsPaid(@PathVariable Long bookingId) {
+
+        log.info("Marking booking as paid. bookingId={}", bookingId);
+
+        BookingResponseDto response = bookingService.markAsPaid(bookingId);
+
+        log.info("Booking payment synced successfully. bookingId={}, status={}",
+                bookingId, response.getStatus());
+
+        return ResponseEntity.ok(response);
     }
 }
 

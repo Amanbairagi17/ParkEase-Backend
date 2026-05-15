@@ -15,6 +15,9 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long paymentId;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false)
     private Long bookingId;
 
@@ -44,4 +47,7 @@ public class Payment {
     private LocalDateTime paidAt;
     private LocalDateTime refundedAt;
     private String description;
+
+    @Column(unique = true)
+    private String idempotencyKey;
 }

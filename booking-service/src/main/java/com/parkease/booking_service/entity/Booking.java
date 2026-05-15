@@ -15,6 +15,9 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long bookingId;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false)
     private Long userId;
 
@@ -42,6 +45,10 @@ public class Booking {
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;
+
+    private LocalDateTime checkInTime;
+
+    private LocalDateTime checkOutTime;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

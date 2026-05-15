@@ -197,7 +197,7 @@ class BookingControllerTest {
 
         BookingResponseDto responseDto = buildResponse();
 
-        responseDto.setStatus(BookingStatus.ACTIVE);
+                responseDto.setStatus(BookingStatus.CHECKED_IN);
 
         when(bookingService.checkIn(10L))
                 .thenReturn(responseDto);
@@ -208,7 +208,7 @@ class BookingControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         assertEquals(
-                BookingStatus.ACTIVE,
+                BookingStatus.CHECKED_IN,
                 response.getBody().getStatus()
         );
 
@@ -220,7 +220,7 @@ class BookingControllerTest {
 
         BookingResponseDto responseDto = buildResponse();
 
-        responseDto.setStatus(BookingStatus.COMPLETED);
+        responseDto.setStatus(BookingStatus.CHECKED_OUT);
 
         when(bookingService.checkOut(
                 10L,
@@ -236,7 +236,7 @@ class BookingControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
 
         assertEquals(
-                BookingStatus.COMPLETED,
+                BookingStatus.CHECKED_OUT,
                 response.getBody().getStatus()
         );
 
@@ -439,7 +439,7 @@ class BookingControllerTest {
 
         response.setPricingType(PricingType.HOURLY);
 
-        response.setStatus(BookingStatus.RESERVED);
+        response.setStatus(BookingStatus.CONFIRMED);
 
         response.setTotalAmount(
                 new BigDecimal("100")

@@ -15,6 +15,9 @@ public class ParkingLot {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long lotId;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false)
     private String name;
 

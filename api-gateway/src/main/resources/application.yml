@@ -213,6 +213,17 @@ spring:
                   - MANAGER
                   - ADMIN
 
+        - id: receipt-service
+          uri: lb://receipt-service
+          predicates:
+            - Path=/api/receipts/**
+          filters:
+            - name: RoleFilter
+              args:
+                roles:
+                  - DRIVER
+                  - ADMIN
+
 eureka:
   client:
     service-url:

@@ -8,5 +8,7 @@ public class ParkingSpotLookupResponseDto {
     private Long spotId;
     private Long lotId;
     private String status;
+    private String spotNumber;
+    private String vehicleType;
     private Double pricePerHour;
 }

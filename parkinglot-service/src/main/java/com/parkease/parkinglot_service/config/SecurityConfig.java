@@ -21,10 +21,13 @@ public class SecurityConfig {
         http
             .csrf(customizer -> customizer.disable())
             .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/api/internal/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/parking-lots/**").permitAll()
                 .anyRequest().authenticated()
             )
                 .addFilterBefore(headerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
+
+
 }

@@ -2,6 +2,7 @@ package com.parkease.api_gateway.filter;
 
 import com.parkease.api_gateway.security.JwtUtil;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -15,6 +16,7 @@ import reactor.core.publisher.Mono;
 import java.util.List;
 
 @Component
+@Slf4j
 public class RoleFilter extends AbstractGatewayFilterFactory<RoleFilter.Config> {
 
     private final JwtUtil jwtUtil;
@@ -33,8 +35,10 @@ public class RoleFilter extends AbstractGatewayFilterFactory<RoleFilter.Config> 
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
 
-            // ✅ Public routes
-            if (config.getRoles() != null && config.getRoles().contains("PUBLIC")) {
+            if (config.getRoles() != null
+                    && config.getRoles().size() == 1
+                    && config.getRoles().contains("PUBLIC")) {
+                log.debug("Skipping auth for pure PUBLIC route");
                 return chain.filter(exchange);
             }
 
@@ -61,20 +65,25 @@ public class RoleFilter extends AbstractGatewayFilterFactory<RoleFilter.Config> 
                         .anyMatch(role -> userRoles.contains("ROLE_" + role));
 
                 if (!allowed) {
+                    log.warn("Role denied. required={}, actual={}", config.getRoles(), userRoles);
                     return onError(exchange, "Forbidden", HttpStatus.FORBIDDEN);
                 }
 
                 // ✅ Inject headers for downstream services
                 exchange = exchange.mutate()
                         .request(r -> r
+                                .header(HttpHeaders.AUTHORIZATION, authHeader)
                                 .header("X-User-Id", String.valueOf(userId))
                                 .header("X-User-Roles", String.join(",", userRoles))
                         )
                         .build();
 
+                log.info("Gateway role pass. userId={}, roles={}", userId, userRoles);
+
                 return chain.filter(exchange);
 
             } catch (Exception e) {
+                log.error("Role filter token validation failed: {}", e.getMessage());
                 return onError(exchange, "Invalid token", HttpStatus.UNAUTHORIZED);
             }
         };

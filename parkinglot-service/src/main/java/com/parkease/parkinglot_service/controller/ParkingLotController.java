@@ -85,7 +85,7 @@ public class ParkingLotController {
     }
 
     //  Manager owns data OR Admin
-    @PreAuthorize("hasRole('ADMIN') or #managerId == authentication.principal")
+    @PreAuthorize("hasRole('ADMIN') or @parkingLotSecurity.isCurrentUser(#managerId)")
     @GetMapping("/manager/{managerId}")
     public ResponseEntity<List<ParkingLotResponseDto>> getLotsByManager(@PathVariable Long managerId) {
 

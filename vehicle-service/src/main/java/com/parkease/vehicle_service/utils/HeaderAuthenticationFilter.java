@@ -26,37 +26,31 @@ public class HeaderAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String userIdHeader = request.getHeader("X-User-Id");
-        String rolesHeader  = request.getHeader("X-User-Roles");
+        String rolesHeader = request.getHeader("X-User-Roles");
+        String authorization = request.getHeader("Authorization");
 
-        log.info("User Role : " +userIdHeader);
-        log.info("User Header : " +rolesHeader);
-        // Skip if already authenticated
-        if (SecurityContextHolder.getContext().getAuthentication() == null) {
+        log.debug("Incoming auth headers. AuthorizationPresent={}, X-User-Id={}, X-User-Roles={}",
+                authorization != null, userIdHeader, rolesHeader);
 
-            if (userIdHeader != null && rolesHeader != null) {
+        if (SecurityContextHolder.getContext().getAuthentication() == null
+                && userIdHeader != null && !userIdHeader.isBlank()
+                && rolesHeader != null && !rolesHeader.isBlank()) {
+            try {
+                Long userId = Long.parseLong(userIdHeader.trim());
 
-                try {
-                    Long userId = Long.parseLong(userIdHeader);
+                List<SimpleGrantedAuthority> authorities =
+                        Arrays.stream(rolesHeader.split(","))
+                                .map(String::trim)
+                                .filter(role -> !role.isBlank())
+                                .map(SimpleGrantedAuthority::new)
+                                .toList();
 
-                    List<SimpleGrantedAuthority> authorities =
-                            Arrays.stream(rolesHeader.split(","))
-                                    .map(String::trim)
-                                    .map(SimpleGrantedAuthority::new)
-                                    .toList();
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userId, null, authorities);
 
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    userId,
-                                    null,
-                                    authorities
-                            );
-
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
-
-                } catch (Exception ex) {
-                    // Optional: log error
-                    System.out.println("Invalid header auth: " + ex.getMessage());
-                }
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (NumberFormatException ex) {
+                log.warn("Invalid X-User-Id header: {}", userIdHeader);
             }
         }
 

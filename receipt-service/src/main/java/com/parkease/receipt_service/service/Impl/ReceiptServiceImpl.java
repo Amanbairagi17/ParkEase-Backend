@@ -1,39 +1,33 @@
-package com.parkease.receipt_service.service;
+package com.parkease.receipt_service.service.Impl;
 
 import com.parkease.receipt_service.client.BookingClient;
 import com.parkease.receipt_service.client.ParkingLotClient;
 import com.parkease.receipt_service.client.ParkingSpotClient;
 import com.parkease.receipt_service.client.PaymentClient;
-import com.parkease.receipt_service.client.UserClient;
 import com.parkease.receipt_service.dtos.BookingResponseDto;
 import com.parkease.receipt_service.dtos.ParkingLotResponseDto;
 import com.parkease.receipt_service.dtos.ParkingSpotResponseDto;
 import com.parkease.receipt_service.dtos.PaymentResponseDto;
 import com.parkease.receipt_service.dtos.PaymentSuccessEventDto;
 import com.parkease.receipt_service.dtos.ReceiptResponseDto;
-import com.parkease.receipt_service.dtos.UserResponseDto;
 import com.parkease.receipt_service.entity.Receipt;
+import com.parkease.receipt_service.event.NotificationEventPublisher;
 import com.parkease.receipt_service.exception.BookingNotFoundException;
 import com.parkease.receipt_service.exception.DuplicateReceiptException;
-import com.parkease.receipt_service.exception.InvalidPaymentStatusException;
 import com.parkease.receipt_service.exception.PaymentNotFoundException;
-import com.parkease.receipt_service.exception.PdfGenerationException;
 import com.parkease.receipt_service.exception.ReceiptNotFoundException;
 import com.parkease.receipt_service.repository.ReceiptRepository;
-import com.parkease.receipt_service.utils.PdfGenerator;
+import com.parkease.receipt_service.service.ReceiptService;
 import com.parkease.receipt_service.utils.ReceiptNumberGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -47,35 +41,20 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final BookingClient bookingClient;
     private final ParkingLotClient parkingLotClient;
     private final ParkingSpotClient parkingSpotClient;
-    private final UserClient userClient;
-    private final PdfGenerator pdfGenerator;
     private final ModelMapper modelMapper;
-
-    @Value("${receipt.storage.path:receipts}")
-    private String storagePath;
-
-    @Value("${receipt.download.base-url:/api/receipts/download}")
-    private String downloadBaseUrl;
+    private final NotificationEventPublisher notificationPublisher;
 
     @Override
     @Transactional
     public ReceiptResponseDto generateReceipt(Long paymentId) {
-        if (paymentId == null) {
-            throw new PaymentNotFoundException("Payment id is required");
-        }
-
         receiptRepository.findByPaymentId(paymentId)
                 .ifPresent(receipt -> {
-                    throw new DuplicateReceiptException("Receipt already generated for paymentId=" + paymentId);
+                    throw new DuplicateReceiptException("Receipt already exists for payment: " + paymentId);
                 });
 
         PaymentResponseDto payment = paymentClient.getPaymentById(paymentId);
         if (payment == null) {
             throw new PaymentNotFoundException("Payment not found: " + paymentId);
-        }
-
-        if (!"SUCCESS".equalsIgnoreCase(payment.getStatus())) {
-            throw new InvalidPaymentStatusException("Payment status is not SUCCESS: " + payment.getStatus());
         }
 
         BookingResponseDto booking = bookingClient.getBooking(payment.getBookingId());
@@ -93,14 +72,9 @@ public class ReceiptServiceImpl implements ReceiptService {
             throw new PaymentNotFoundException("Payment id is required");
         }
 
-        receiptRepository.findByPaymentId(event.getPaymentId())
-                .ifPresent(receipt -> {
-                    log.info("Receipt already exists for paymentId={}", event.getPaymentId());
-                    throw new DuplicateReceiptException("Receipt already generated for paymentId=" + event.getPaymentId());
-                });
-
-        if (event.getBookingId() == null) {
-            throw new BookingNotFoundException("Booking id is required");
+        if (receiptRepository.findByPaymentId(event.getPaymentId()).isPresent()) {
+            log.info("Receipt already exists for paymentId={}", event.getPaymentId());
+            return toResponse(receiptRepository.findByPaymentId(event.getPaymentId()).get());
         }
 
         BookingResponseDto booking = bookingClient.getBooking(event.getBookingId());
@@ -120,10 +94,6 @@ public class ReceiptServiceImpl implements ReceiptService {
         payment.setRazorpayPaymentId(event.getRazorpayPaymentId());
         payment.setPaidAt(LocalDateTime.now());
 
-        if (!"SUCCESS".equalsIgnoreCase(payment.getStatus())) {
-            throw new InvalidPaymentStatusException("Payment status is not SUCCESS: " + payment.getStatus());
-        }
-
         return createReceipt(payment, booking);
     }
 
@@ -135,32 +105,18 @@ public class ReceiptServiceImpl implements ReceiptService {
     }
 
     @Override
+    public ReceiptResponseDto getReceiptByPayment(Long paymentId) {
+        Receipt receipt = receiptRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new ReceiptNotFoundException("Receipt not found for payment: " + paymentId));
+        return toResponse(receipt);
+    }
+
+    @Override
     public List<ReceiptResponseDto> getReceiptsByUser(Long userId) {
         return receiptRepository.findByUserIdOrderByGeneratedAtDesc(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
-    }
-
-    @Override
-    public byte[] downloadReceipt(String receiptId) {
-        Receipt receipt = receiptRepository.findById(receiptId)
-                .orElseThrow(() -> new ReceiptNotFoundException("Receipt not found: " + receiptId));
-
-        if (receipt.getPdfPath() == null) {
-            throw new ReceiptNotFoundException("Receipt PDF not available");
-        }
-
-        Path path = Paths.get(receipt.getPdfPath());
-        if (!Files.exists(path)) {
-            throw new ReceiptNotFoundException("Receipt PDF not found on disk");
-        }
-
-        try {
-            return Files.readAllBytes(path);
-        } catch (IOException ex) {
-            throw new PdfGenerationException("Unable to read receipt PDF", ex);
-        }
     }
 
     private ReceiptResponseDto createReceipt(PaymentResponseDto payment, BookingResponseDto booking) {
@@ -169,72 +125,79 @@ public class ReceiptServiceImpl implements ReceiptService {
         receipt.setBookingId(payment.getBookingId());
         receipt.setUserId(payment.getUserId());
         receipt.setVehicleNumber(booking.getVehiclePlate());
-        receipt.setCheckInTime(booking.getStartTime());
-        receipt.setCheckOutTime(booking.getEndTime());
+        
+        LocalDateTime checkInTime = booking.getCheckInTime() != null ? booking.getCheckInTime() : booking.getStartTime();
+        LocalDateTime checkOutTime = booking.getCheckOutTime() != null ? booking.getCheckOutTime() : booking.getEndTime();
+        
+        receipt.setCheckInTime(checkInTime);
+        receipt.setCheckOutTime(checkOutTime);
         receipt.setDuration(booking.getDuration());
-        receipt.setAmountPaid(payment.getAmount() != null ? payment.getAmount() : booking.getTotalAmount());
+        receipt.setBookingType(booking.getBookingType());
+        receipt.setPricingType(booking.getPricingType());
+        
+        BigDecimal totalAmount = payment.getAmount() != null ? payment.getAmount() : booking.getTotalAmount();
+        receipt.setAmountPaid(totalAmount);
+        applyTaxBreakup(receipt, totalAmount);
+        
         receipt.setPaymentMethod(payment.getMode());
         receipt.setPaymentStatus(payment.getStatus());
         receipt.setTransactionId(payment.getTransactionId());
         receipt.setRazorpayOrderId(payment.getRazorpayOrderId());
         receipt.setRazorpayPaymentId(payment.getRazorpayPaymentId());
+        receipt.setPaymentTime(payment.getPaidAt() != null ? payment.getPaidAt() : LocalDateTime.now());
         receipt.setGeneratedAt(LocalDateTime.now());
 
         ParkingLotResponseDto lot = parkingLotClient.getLot(booking.getLotId());
-        if (lot != null) {
-            receipt.setParkingName(lot.getName());
-        } else {
-            receipt.setParkingName("Unknown Parking");
-        }
+        receipt.setParkingName(lot != null ? lot.getName() : "Unknown Parking");
 
         ParkingSpotResponseDto spot = parkingSpotClient.getSpot(booking.getSpotId());
-        if (spot != null) {
-            receipt.setSlotNumber(spot.getSpotNumber());
-        } else {
-            receipt.setSlotNumber("N/A");
-        }
+        receipt.setSlotNumber(spot != null ? spot.getSpotNumber() : "N/A");
 
-        Receipt saved;
         try {
-            saved = receiptRepository.save(receipt);
+
+            receipt.setReceiptNumber(
+                    "RCT-" + System.currentTimeMillis()
+            );
+
+            Receipt persisted =
+                    receiptRepository.save(receipt);
+
+            notificationPublisher.publishReceiptGenerated(
+                    persisted.getUserId(),
+                    persisted.getBookingId(),
+                    persisted.getReceiptNumber()
+            );
+
+            return toResponse(persisted);
+
         } catch (DataIntegrityViolationException ex) {
+
             throw new DuplicateReceiptException("Receipt already generated for paymentId=" + payment.getPaymentId());
         }
-        saved.setReceiptNumber(ReceiptNumberGenerator.generate(payment.getPaymentId(), saved.getReceiptId()));
-
-        Receipt persisted = receiptRepository.save(saved);
-
-        UserResponseDto user = null;
-        if (payment.getUserId() != null) {
-            user = userClient.getUserById(payment.getUserId());
-        }
-
-        byte[] pdfBytes = pdfGenerator.generateReceiptPdf(persisted, user);
-        String pdfPath = storePdf(persisted, pdfBytes);
-        persisted.setPdfPath(pdfPath);
-
-        Receipt finalReceipt = receiptRepository.save(persisted);
-        return toResponse(finalReceipt);
     }
 
-    private String storePdf(Receipt receipt, byte[] pdfBytes) {
-        try {
-            Path basePath = Paths.get(storagePath);
-            if (!Files.exists(basePath)) {
-                Files.createDirectories(basePath);
-            }
-            String fileName = receipt.getReceiptNumber() + ".pdf";
-            Path filePath = basePath.resolve(fileName);
-            Files.write(filePath, pdfBytes);
-            return filePath.toAbsolutePath().toString();
-        } catch (IOException ex) {
-            throw new PdfGenerationException("Failed to store receipt PDF", ex);
+    private void applyTaxBreakup(Receipt receipt, BigDecimal totalAmount) {
+        if (totalAmount == null) {
+            receipt.setBaseAmount(BigDecimal.ZERO);
+            receipt.setServiceCharge(BigDecimal.ZERO);
+            receipt.setGstAmount(BigDecimal.ZERO);
+            return;
         }
+
+        BigDecimal serviceRate = BigDecimal.valueOf(0.02);
+        BigDecimal gstRate = BigDecimal.valueOf(0.18);
+        BigDecimal divisor = BigDecimal.ONE.add(serviceRate).add(gstRate);
+        BigDecimal baseAmount = totalAmount.divide(divisor, 2, RoundingMode.HALF_UP);
+        BigDecimal serviceCharge = baseAmount.multiply(serviceRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal gstAmount = totalAmount.subtract(baseAmount).subtract(serviceCharge).setScale(2, RoundingMode.HALF_UP);
+
+        receipt.setBaseAmount(baseAmount);
+        receipt.setServiceCharge(serviceCharge);
+        receipt.setGstAmount(gstAmount);
     }
 
     private ReceiptResponseDto toResponse(Receipt receipt) {
-        ReceiptResponseDto response = modelMapper.map(receipt, ReceiptResponseDto.class);
-        response.setDownloadUrl(downloadBaseUrl + "/" + receipt.getReceiptId());
-        return response;
+        return modelMapper.map(receipt, ReceiptResponseDto.class);
     }
 }
+

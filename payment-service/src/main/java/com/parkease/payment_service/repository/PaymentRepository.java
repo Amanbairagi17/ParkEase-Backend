@@ -27,6 +27,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByRazorpayOrderId(String razorpayOrderId);
 
+    Optional<Payment> findByRazorpayPaymentId(String razorpayPaymentId);
+
+    Optional<Payment> findByIdempotencyKey(String idempotencyKey);
+
     List<Payment> findByPaidAtBetween(LocalDateTime from, LocalDateTime to);
 
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.bookingId IN :bookingIds AND p.status = com.parkease.payment_service.entity.PaymentStatus.SUCCESS")

@@ -1,6 +1,5 @@
 package com.parkease.vehicle_service.utils;
 
-import com.parkease.vehicle_service.client.UserServiceClient;
 import com.parkease.vehicle_service.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -9,7 +8,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class VehicleSecurity {
 
-    private final UserServiceClient userServiceClient;
+    private final VehicleRepository vehicleRepository;
 
     public boolean isOwner(Long vehicleId) {
 
@@ -21,13 +20,18 @@ public class VehicleSecurity {
             return true;
         }
 
-        //  Fetch only ownerId (optimized)
-        Long ownerId = userServiceClient.getUserById(SecurityUtils.getCurrentUserId()).getOwnerId();
+        Long ownerId = vehicleRepository.findById(vehicleId)
+                .map(vehicle -> vehicle.getOwnerId())
+                .orElse(null);
 
         if (ownerId == null) {
             return false;
         }
 
         return ownerId.equals(currentUserId);
+    }
+
+    public boolean isCurrentUser(Long ownerId) {
+        return SecurityUtils.isCurrentUser(ownerId);
     }
 }

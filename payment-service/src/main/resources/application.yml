@@ -25,6 +25,10 @@ spring:
 server:
   port: 8087
 
+internal:
+  auth:
+    token: ${INTERNAL_AUTH_TOKEN:parkease-internal}
+
 eureka:
   client:
     register-with-eureka: true

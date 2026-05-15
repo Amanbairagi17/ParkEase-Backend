@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 public class ParkingLotSecurity {
 
     private final ParkingLotServiceClient parkingLotServiceClient;
+    private final ParkingSpotRepository parkingSpotRepository;
 
     public boolean isOwner(Long spotId) {
 
@@ -21,13 +22,15 @@ public class ParkingLotSecurity {
             return true;
         }
 
-//        ParkingSpot spot = parkingSpotRepository.findById(spotId)
-//                .orElse(null);
-//        if (spot == null) return false;
+        Long lotId = parkingSpotRepository.findById(spotId)
+                .map(spot -> spot.getLotId())
+                .orElse(null);
+        if (lotId == null) {
+            return false;
+        }
 
-        // 🔥 Call another service
-        ParkingLotLookupResponseDto responseDto = parkingLotServiceClient.getLotById(spotId);
+        ParkingLotLookupResponseDto responseDto = parkingLotServiceClient.getLotById(lotId);
 
-        return currentUserId != null && currentUserId.equals(responseDto.getManagerId());
+        return currentUserId != null && responseDto != null && currentUserId.equals(responseDto.getManagerId());
     }
 }

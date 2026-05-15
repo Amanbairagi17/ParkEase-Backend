@@ -2,10 +2,13 @@ package com.parkease.booking_service.repository;
 
 import com.parkease.booking_service.entity.Booking;
 import com.parkease.booking_service.entity.BookingStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +26,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByStatus(BookingStatus status);
 
+    List<Booking> findByStatusIn(List<BookingStatus> status);
+
     Optional<Booking> findByBookingId(Long bookingId);
 
     Optional<Booking> findByVehiclePlate(String vehiclePlate);
@@ -30,10 +35,36 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("""
             SELECT b FROM Booking b
             WHERE b.spotId = :spotId
-              AND b.status IN (com.parkease.booking_service.entity.BookingStatus.RESERVED,
-                               com.parkease.booking_service.entity.BookingStatus.ACTIVE)
+            AND b.status IN (
+                 com.parkease.booking_service.entity.BookingStatus.RESERVED,
+                 com.parkease.booking_service.entity.BookingStatus.ACTIVE)
             """)
     Optional<Booking> findActiveBySpotId(@Param("spotId") Long spotId);
+
+    @Query("""
+            SELECT COUNT(b) > 0 FROM Booking b
+            WHERE b.spotId = :spotId
+              AND b.status IN (
+                 com.parkease.booking_service.entity.BookingStatus.RESERVED,
+                 com.parkease.booking_service.entity.BookingStatus.ACTIVE)
+              AND b.startTime < :endTime
+              AND COALESCE(b.endTime, :endTime) > :startTime
+            """)
+    boolean existsOverlappingBooking(@Param("spotId") Long spotId,
+                                     @Param("startTime") LocalDateTime startTime,
+                                     @Param("endTime") LocalDateTime endTime);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Booking b WHERE b.bookingId = :bookingId")
+    Optional<Booking> findByBookingIdForUpdate(@Param("bookingId") Long bookingId);
+
+    @Query("""
+            SELECT b FROM Booking b
+            WHERE b.status = com.parkease.booking_service.entity.BookingStatus.RESERVED
+              AND b.startTime < :expiredBefore
+            """)
+    List<Booking> findExpiredReservedBookings(@Param("expiredBefore") LocalDateTime expiredBefore);
+
 
     long countByLotIdAndStatus(Long lotId, BookingStatus status);
 

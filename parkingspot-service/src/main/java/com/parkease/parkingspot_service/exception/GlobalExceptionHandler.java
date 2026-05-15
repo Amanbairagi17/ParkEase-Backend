@@ -3,10 +3,13 @@ package com.parkease.parkingspot_service.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.TransactionSystemException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -73,16 +76,43 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(errorResponse);
     }
 
+    @ExceptionHandler({
+            TransactionSystemException.class,
+            DataIntegrityViolationException.class,
+            ObjectOptimisticLockingFailureException.class
+    })
+    public ResponseEntity<ErrorResponse> handlePersistenceExceptions(RuntimeException exception) {
+        Throwable root = getRootCause(exception);
+        log.error("Persistence failure", root);
+
+        ErrorResponse errorResponse = new ErrorResponse();
+        errorResponse.setTimeStamp(LocalDateTime.now());
+        errorResponse.setStatus(HttpStatus.CONFLICT.value());
+        errorResponse.setError("Persistence conflict");
+        errorResponse.setMessage(root.getMessage() != null ? root.getMessage() : "Database update failed");
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException exception) {
-        log.error(exception.getMessage());
+        Throwable root = getRootCause(exception);
+        log.error("Unhandled error", root);
 
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setTimeStamp(LocalDateTime.now());
         errorResponse.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
         errorResponse.setError("Internal server error");
-        errorResponse.setMessage(exception.getMessage());
+        errorResponse.setMessage(root.getMessage());
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    private Throwable getRootCause(Throwable throwable) {
+        Throwable current = throwable;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
+        }
+        return current;
     }
 }

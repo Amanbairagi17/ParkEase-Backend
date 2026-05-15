@@ -56,6 +56,19 @@ public class Receipt {
 
     private String duration;
 
+    private String bookingType;
+
+    private String pricingType;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal baseAmount;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal serviceCharge;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal gstAmount;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amountPaid;
 
@@ -69,9 +82,10 @@ public class Receipt {
 
     private String razorpayPaymentId;
 
+    private LocalDateTime paymentTime;
+
     private LocalDateTime generatedAt;
 
-    private String pdfPath;
 
     @CreatedDate
     @Column(updatable = false)

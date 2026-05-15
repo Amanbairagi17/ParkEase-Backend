@@ -12,15 +12,23 @@ public interface PaymentService {
 
     PaymentResponseDto processPayment(PaymentRequestDto requestDto);
 
+    PaymentResponseDto initializePayment(PaymentRequestDto requestDto);
+
     RazorpayOrderDto createRazorpayOrder(PaymentRequestDto requestDto);
 
     PaymentResponseDto verifyPayment(PaymentVerificationDto verificationDto);
 
     PaymentResponseDto getByBookingId(Long bookingId);
 
+    PaymentResponseDto getByPaymentId(Long paymentId);
+
     List<PaymentResponseDto> getByUserId(Long userId);
 
     PaymentResponseDto refundPayment(Long paymentId);
+
+    PaymentResponseDto refundByBookingId(Long bookingId);
+
+    PaymentResponseDto handleWebhook(String payload, String signature);
 
     String getPaymentStatus(Long paymentId);
 

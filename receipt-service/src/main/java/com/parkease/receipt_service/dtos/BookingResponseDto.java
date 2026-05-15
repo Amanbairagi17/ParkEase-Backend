@@ -13,8 +13,12 @@ public class BookingResponseDto {
     private Long spotId;
     private String vehiclePlate;
     private String vehicleType;
+    private String bookingType;
+    private String pricingType;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    private LocalDateTime checkInTime;
+    private LocalDateTime checkOutTime;
     private String duration;
     private BigDecimal totalAmount;
 }
