@@ -8,22 +8,33 @@ spring:
   data:
     redis:
       host: localhost
+#      host: redis
       port: 6379
 
   boot:
     admin:
       client:
+#        url: http://admin:9090
         url: http://localhost:9090
 
   cloud:
     gateway:
+
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
 
       globalcors:
+
+        add-to-simple-url-handler-mapping: true
+
         cors-configurations:
           '[/**]':
-            allowedOrigins: "http://localhost:4200"
+
+            allowedOrigins:
+              - "http://localhost:4200"
+#            allowedOrigins:
+#              - "http://parkeasee.s3-website.eu-north-1.amazonaws.com"
+
             allowedMethods:
               - GET
               - POST
@@ -31,7 +42,13 @@ spring:
               - DELETE
               - OPTIONS
               - PATCH
+
             allowedHeaders: "*"
+
+            exposedHeaders:
+              - Authorization
+              - Content-Type
+
             allowCredentials: true
             maxAge: 3600
 
@@ -227,12 +244,14 @@ spring:
 eureka:
   client:
     service-url:
+#      defaultZone: http://eureka:8761/eureka/
       defaultZone: http://localhost:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
 
   instance:
     prefer-ip-address: true
+#    hostname: api-gateway
     instance-id: ${spring.application.name}:${server.port}
 
 security:

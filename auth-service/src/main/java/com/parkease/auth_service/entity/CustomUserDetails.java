@@ -51,7 +51,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;   // active user
+        return user.getIsActive() != null && user.getIsActive();
     }
 
     // this user Id needed in jwt creation for role-based access

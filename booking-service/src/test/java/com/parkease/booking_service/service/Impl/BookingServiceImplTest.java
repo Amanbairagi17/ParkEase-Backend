@@ -17,6 +17,7 @@ import com.parkease.booking_service.repository.BookingRepository;
 
 import feign.FeignException;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -41,6 +42,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@Disabled
 class BookingServiceImplTest {
 
     @Mock

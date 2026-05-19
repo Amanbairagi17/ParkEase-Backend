@@ -5,6 +5,7 @@ spring:
   boot:
     admin:
       client:
+#        url: http://admin:9090
         url: http://localhost:9090
 
   cloud:
@@ -20,13 +21,15 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-      show-sql: false
+    show-sql: false
 
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
+    host: localhost
+#    host: rabbitmq
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+
     listener:
       simple:
         missing-queues-fatal: false
@@ -40,17 +43,23 @@ eureka:
     fetch-registry: true
     healthcheck:
       enabled: true
+
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+#      defaultZone: http://eureka:8761/eureka/
+       defaultZone: http://localhost:8761/eureka/
+
   instance:
     prefer-ip-address: true
+#    hostname: receipt-service
     instance-id: ${spring.application.name}:${server.port}
 
 receipt:
   storage:
     path: ${RECEIPT_STORAGE_PATH:receipts}
+
   download:
     base-url: ${RECEIPT_DOWNLOAD_BASE_URL:/api/receipts/download}
+
   service-auth:
     user-id: ${RECEIPT_SERVICE_USER_ID:0}
     roles: ${RECEIPT_SERVICE_ROLES:ROLE_ADMIN}

@@ -5,6 +5,7 @@ spring:
   boot:
     admin:
       client:
+#        url: http://admin:9090
         url: http://localhost:9090
 
   cloud:
@@ -20,7 +21,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-      show-sql: false
+    show-sql: false
+  rabbitmq:
+#    host: rabbitmq
+    host : localhost
+    port: 5672
+    username: guest
+    password: guest
 
 server:
   port: 8087
@@ -29,16 +36,22 @@ internal:
   auth:
     token: ${INTERNAL_AUTH_TOKEN:parkease-internal}
 
+
+
 eureka:
   client:
     register-with-eureka: true
     fetch-registry: true
     healthcheck:
       enabled: true
+
     service-url:
+#      defaultZone: http://eureka:8761/eureka/
       defaultZone: http://localhost:8761/eureka/
+
   instance:
     prefer-ip-address: true
+#    hostname: payment-service
     instance-id: ${spring.application.name}:${server.port}
 
 razorpay:

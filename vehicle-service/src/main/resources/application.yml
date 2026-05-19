@@ -5,6 +5,7 @@ spring:
   boot:
     admin:
       client:
+#        url: http://admin:9090
         url: http://localhost:9090
 
   datasource:
@@ -15,7 +16,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-      show-sql: false
+    show-sql: false
 
 server:
   port: 8082
@@ -26,10 +27,14 @@ eureka:
     fetch-registry: true
     healthcheck:
       enabled: true
+
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+#      defaultZone: http://eureka:8761/eureka/
+       defaultZone: http://localhost:8761/eureka/
+
   instance:
     prefer-ip-address: true
+#    hostname: vehicle-service
     instance-id: ${spring.application.name}:${server.port}
 
 management:

@@ -69,7 +69,6 @@ public class RoleFilter extends AbstractGatewayFilterFactory<RoleFilter.Config> 
                     return onError(exchange, "Forbidden", HttpStatus.FORBIDDEN);
                 }
 
-                // ✅ Inject headers for downstream services
                 exchange = exchange.mutate()
                         .request(r -> r
                                 .header(HttpHeaders.AUTHORIZATION, authHeader)

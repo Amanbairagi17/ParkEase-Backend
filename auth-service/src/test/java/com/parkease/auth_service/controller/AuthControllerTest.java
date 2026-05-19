@@ -88,17 +88,19 @@ class AuthControllerTest {
     }
 
     @Test
-    void verify_ShouldReturnOk() {
+    void verify_ShouldReturnRedirect() {
+        org.springframework.test.util.ReflectionTestUtils.setField(authController, "frontendUrl", "http://localhost:4200");
 
         doNothing().when(authService).verify("token");
 
-        ResponseEntity<String> response =
+        ResponseEntity<Void> response =
                 authController.verifyUser("token");
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.FOUND, response.getStatusCode());
+        assertNotNull(response.getHeaders().getLocation());
         assertEquals(
-                "Email account verified successfully, you can login now",
-                response.getBody()
+                "http://localhost:4200/verify?success=true",
+                response.getHeaders().getLocation().toString()
         );
 
         verify(authService).verify("token");

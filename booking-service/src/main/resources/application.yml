@@ -6,6 +6,8 @@ spring:
     admin:
       client:
         url: http://localhost:9090
+#        url: http://admin:9090
+
 
   cloud:
     openfeign:
@@ -24,6 +26,7 @@ spring:
 
   rabbitmq:
     host: localhost
+#    host: rabbitmq
     port: 5672
     username: guest
     password: guest
@@ -45,9 +48,12 @@ eureka:
     healthcheck:
       enabled: true
     service-url:
+#      defaultZone: http://eureka:8761/eureka/
       defaultZone: http://localhost:8761/eureka/
+
   instance:
     prefer-ip-address: true
+#    hostname: booking-service
     instance-id: ${spring.application.name}:${server.port}
 
 management:

@@ -73,7 +73,7 @@ public class AuthServiceImpl implements AuthService {
 
         String verificationLink = domainUrl + "/auth/verify/" + savedUserVerification.getToken();
 
-        emailService.sendVerificationEmail(savedUser.getEmail(), savedUserVerification.getToken());
+        emailService.sendVerificationEmail(savedUser.getEmail(), verificationLink);
 
         AuthResponseDto response = authResponseMapper.mapTo(savedUser);
         response.setMessage("User register successfully !!, OTP sent to email.");

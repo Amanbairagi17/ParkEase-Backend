@@ -93,6 +93,8 @@ class AuthServiceImplTest {
 
     @Test
     void registerUser_ShouldSaveUserAndVerification_WhenEmailNotExists() {
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "domainUrl", "http://localhost:8081/api");
+
         SignUpDto dto = buildSignUp();
         User mapped = buildUser();
         User savedUser = buildUser();
@@ -111,7 +113,9 @@ class AuthServiceImplTest {
         verify(authRepository).save(mapped);
         ArgumentCaptor<UserVerification> verificationCaptor = ArgumentCaptor.forClass(UserVerification.class);
         verify(userVerificationRepository).save(verificationCaptor.capture());
-        verify(emailService).sendVerificationEmail(eq(savedUser.getEmail()), eq(verificationCaptor.getValue().getToken()));
+
+        String expectedLink = "http://localhost:8081/api/auth/verify/" + verificationCaptor.getValue().getToken();
+        verify(emailService).sendVerificationEmail(eq(savedUser.getEmail()), eq(expectedLink));
     }
 
     @Test

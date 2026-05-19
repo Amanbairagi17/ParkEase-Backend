@@ -14,6 +14,7 @@ com\parkease\payment_service\utils\PaymentSecurity.class
 com\parkease\payment_service\utils\SecurityUtils.class
 com\parkease\payment_service\dtos\PaymentVerificationDto.class
 com\parkease\payment_service\dtos\NotificationEventDto$NotificationEventDtoBuilder.class
+com\parkease\payment_service\controller\InternalPaymentController.class
 com\parkease\payment_service\entity\PaymentMode.class
 com\parkease\payment_service\dtos\PaymentResponseDto.class
 com\parkease\payment_service\dtos\PaymentSuccessEventDto.class

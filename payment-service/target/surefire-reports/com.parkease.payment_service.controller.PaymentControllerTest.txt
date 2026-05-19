@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.parkease.payment_service.controller.PaymentControllerTest
--------------------------------------------------------------------------------
-Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 21.06 s -- in com.parkease.payment_service.controller.PaymentControllerTest

@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
+    @org.springframework.beans.factory.annotation.Value("${frontend-url:http://localhost:4200}")
+    private String frontendUrl;
+
     private final AuthService authService;
 
     @PostMapping("/register")
@@ -34,11 +37,13 @@ public class AuthController {
     }
 
     @GetMapping("/verify/{token}")
-    public ResponseEntity<String> verifyUser(@PathVariable String token) {
+    public ResponseEntity<Void> verifyUser(@PathVariable String token) {
 
         authService.verify(token);
 
-        return ResponseEntity.ok("Email account verified successfully, you can login now");
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(java.net.URI.create(frontendUrl + "/verify?success=true"))
+                .build();
     }
 
     // SEND OTP
